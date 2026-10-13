@@ -40,7 +40,7 @@ Setelah deploy, buka `https://alamatmu.vercel.app/api/session`: respons harus be
 
 ## Debug routing dan koneksi
 
-Semua URL `/api/...` diteruskan secara eksplisit ke fungsi `/api/index` dengan parameter `__makrab_path`. Router mendukung URL asli, URL entry point hasil rewrite, serta parameter pada `request.query` Vercel. Versi perbaikan mengirim header **`X-Makrab-API: 2`**; cek header ini di DevTools → Network untuk memastikan deployment memakai kode terbaru.
+Semua URL `/api/...` diteruskan secara eksplisit ke fungsi `/api/index` dengan parameter `__makrab_path`. Router mendukung URL asli, URL entry point hasil rewrite, serta parameter pada `request.query` Vercel. Versi perbaikan terbaru mengirim header **`X-Makrab-API: 3`**; cek header ini di DevTools → Network untuk memastikan deployment memakai kode terbaru. Versi 3 juga menangani respons 201 tanpa body dari Supabase saat menyimpan login GM dengan `return=minimal`.
 
 | Respons | Arti |
 | --- | --- |

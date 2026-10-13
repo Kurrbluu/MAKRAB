@@ -31,7 +31,7 @@ export function createCloudHandler({ configuration = cloudConfiguration(), store
     const json = (status, value) => {
       response.setHeader('Cache-Control', 'no-store')
       response.setHeader('X-Content-Type-Options', 'nosniff')
-      response.setHeader('X-Makrab-API', '2')
+      response.setHeader('X-Makrab-API', '3')
       response.setHeader('Content-Type', 'application/json; charset=utf-8')
       response.statusCode = status
       response.end(JSON.stringify(value.state ? { ...value, serverReceivedAt: receivedAt, serverNow: clock() } : value))

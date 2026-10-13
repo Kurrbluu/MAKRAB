@@ -204,7 +204,7 @@ for (const rewrite of ['url', 'query-only']) test(`Vercel ${rewrite} rewrite rea
   const f = await fixture(t, { rewrite })
   const initial = await f.request('/api/session?route=unrelated-client-query')
   assert.equal(initial.status, 200)
-  assert.equal(initial.headers.get('x-makrab-api'), '2')
+  assert.equal(initial.headers.get('x-makrab-api'), '3')
   assert(initial.body.state.gameId)
   assert.deepEqual((await f.request('/api/access')).body, { canControl: false })
   const unauthorized = await f.request('/api/gm/session')
@@ -259,4 +259,14 @@ test('Supabase permission failures are distinct from routing and never echo upst
   assert(!output.includes('private-upstream-sentinel'))
   assert(!output.includes(configuration.secretKey))
   assert(!output.includes(configuration.pin))
+})
+
+test('a failed return=minimal login insert remains an error and cannot issue a successful session', async () => {
+  const document = createSessionDocument(Date.now())
+  const store = createSupabaseStore({ url: configuration.url, secretKey: configuration.secretKey,
+    fetchImpl: async (input, options) => options.method === 'GET'
+      ? Response.json([{ store_version: 0, document }])
+      : Response.json({ error: 'private-upstream-sentinel' }, { status: 403 }) })
+  await assert.rejects(store.saveLogin('a'.repeat(64), 'Test GM', 'b'.repeat(64), Date.now() + 60_000),
+    error => error.code === 'SUPABASE_HTTP_ERROR' && error.status === 403 && !error.message.includes('private-upstream-sentinel'))
 })

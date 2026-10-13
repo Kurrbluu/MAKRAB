@@ -40,7 +40,7 @@ export async function cloudDatabase({ clock = Date.now, secretKey = 'sb_secret_t
           await db.query(`delete from public.${route} ${where}`, values); return new Response(null, { status: 204 })
         } else if (options.method === 'POST' && route === 'makrab_gm_sessions') {
           await db.query('insert into public.makrab_gm_sessions(token_hash,session_key,actor,pin_fingerprint,expires_at) values($1,$2,$3,$4,$5)', [body.token_hash, body.session_key, body.actor, body.pin_fingerprint, body.expires_at])
-          return new Response(null, { status: 204 })
+          return new Response(null, { status: 201, headers: { 'Preference-Applied': 'return=minimal' } })
         } else throw new Error('Unexpected request')
       }
       if (route === 'rpc/makrab_compare_session' && result === true) {

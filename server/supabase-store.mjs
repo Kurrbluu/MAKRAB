@@ -18,7 +18,9 @@ export function createSupabaseStore({ url, secretKey, sessionKey = 'makrab-big-g
     try { response = await fetchImpl(new URL(path, base), { method, headers: { ...headers, ...(prefer ? { Prefer: prefer } : {}) }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(7000) }) }
     catch { throw new StorageUnavailable('Penyimpanan online belum tersambung.') }
     if (!response.ok) throw new StorageUnavailable('Penyimpanan online belum siap.', { code: 'SUPABASE_HTTP_ERROR', status: response.status })
-    if (response.status === 204) return null
+    // PostgREST inserts can succeed with 201 and an empty body when return=minimal
+    // is requested. Reading JSON here would fail after the login row was saved.
+    if (response.status === 204 || prefer === 'return=minimal') return null
     try { return await response.json() }
     catch { throw new StorageUnavailable('Respons penyimpanan tidak valid.', { code: 'SUPABASE_RESPONSE_INVALID' }) }
   }
