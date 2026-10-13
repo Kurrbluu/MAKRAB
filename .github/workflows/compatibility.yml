@@ -1,0 +1,36 @@
+name: Windows and macOS compatibility
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            shell: cmd
+          - os: macos-latest
+            shell: bash
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: MAKRAB Big Game
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: MAKRAB Big Game
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: MAKRAB Big Game/package-lock.json
+      - run: npm ci
+        shell: ${{ matrix.shell }}
+      - run: npm test
+        shell: ${{ matrix.shell }}
+      - run: npm run build
+        shell: ${{ matrix.shell }}

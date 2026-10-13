@@ -1,0 +1,14 @@
+.game-state
+.env
+.env.*
+!.env.example
+node_modules
+dist
+/exports
+/audio
+/design
+/MAKRAB Video Asset
+/*.png
+/*.mp4
+/*.zip
+.DS_Store

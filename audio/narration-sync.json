@@ -1,0 +1,175 @@
+{
+  "source": "audio/Generated Audio October 08, 2026 - 1_10PM.wav",
+  "sourceDurationMs": 330040,
+  "durationMs": 330040,
+  "asset": "assets/tutorial-narration.m4a",
+  "sampleRate": 24000,
+  "revision": "voiceover-1310-sync-1",
+  "notes": [
+    "The latest recording is preserved at its original pace, with no added pauses or word replacements.",
+    "Visible inspection card faces rotate only between -90 and 90 degrees, so reveal text never mirrors.",
+    "The ordinary Exchange uses one selection and one transfer, with the GM contingency and verification between them."
+  ],
+  "chapters": [
+    {
+      "id": "intro",
+      "sourceStartMs": 0,
+      "sourceEndMs": 9240,
+      "videoStartMs": 0,
+      "durationMs": 9240,
+      "quietTailMs": 0
+    },
+    {
+      "id": "leaders",
+      "sourceStartMs": 9240,
+      "sourceEndMs": 16280,
+      "videoStartMs": 9240,
+      "durationMs": 7040,
+      "quietTailMs": 0
+    },
+    {
+      "id": "leader-protection",
+      "sourceStartMs": 16280,
+      "sourceEndMs": 20800,
+      "videoStartMs": 16280,
+      "durationMs": 4520,
+      "quietTailMs": 0
+    },
+    {
+      "id": "ribbons",
+      "sourceStartMs": 20800,
+      "sourceEndMs": 30720,
+      "videoStartMs": 20800,
+      "durationMs": 9920,
+      "quietTailMs": 0
+    },
+    {
+      "id": "roles",
+      "sourceStartMs": 30720,
+      "sourceEndMs": 38200,
+      "videoStartMs": 30720,
+      "durationMs": 7480,
+      "quietTailMs": 0
+    },
+    {
+      "id": "card-pickup",
+      "sourceStartMs": 38200,
+      "sourceEndMs": 45800,
+      "videoStartMs": 38200,
+      "durationMs": 7600,
+      "quietTailMs": 0
+    },
+    {
+      "id": "rooms",
+      "sourceStartMs": 45800,
+      "sourceEndMs": 57800,
+      "videoStartMs": 45800,
+      "durationMs": 12000,
+      "quietTailMs": 0
+    },
+    {
+      "id": "faction-spots",
+      "sourceStartMs": 57800,
+      "sourceEndMs": 72240,
+      "videoStartMs": 57800,
+      "durationMs": 14440,
+      "quietTailMs": 0
+    },
+    {
+      "id": "gm-cues",
+      "sourceStartMs": 72240,
+      "sourceEndMs": 85140,
+      "videoStartMs": 72240,
+      "durationMs": 12900,
+      "quietTailMs": 0
+    },
+    {
+      "id": "loop",
+      "sourceStartMs": 85140,
+      "sourceEndMs": 94140,
+      "videoStartMs": 85140,
+      "durationMs": 9000,
+      "quietTailMs": 0
+    },
+    {
+      "id": "inspection",
+      "sourceStartMs": 94140,
+      "sourceEndMs": 139700,
+      "videoStartMs": 94140,
+      "durationMs": 45560,
+      "quietTailMs": 0
+    },
+    {
+      "id": "discussion",
+      "sourceStartMs": 139700,
+      "sourceEndMs": 156800,
+      "videoStartMs": 139700,
+      "durationMs": 17100,
+      "quietTailMs": 0
+    },
+    {
+      "id": "exchange",
+      "sourceStartMs": 156800,
+      "sourceEndMs": 196160,
+      "videoStartMs": 156800,
+      "durationMs": 39360,
+      "quietTailMs": 0
+    },
+    {
+      "id": "gm-selection",
+      "sourceStartMs": 196160,
+      "sourceEndMs": 208560,
+      "videoStartMs": 196160,
+      "durationMs": 12400,
+      "quietTailMs": 0
+    },
+    {
+      "id": "exchange-completion",
+      "sourceStartMs": 208560,
+      "sourceEndMs": 233080,
+      "videoStartMs": 208560,
+      "durationMs": 24520,
+      "quietTailMs": 0
+    },
+    {
+      "id": "gambler-exchange",
+      "sourceStartMs": 233080,
+      "sourceEndMs": 256600,
+      "videoStartMs": 233080,
+      "durationMs": 23520,
+      "quietTailMs": 0
+    },
+    {
+      "id": "final",
+      "sourceStartMs": 256600,
+      "sourceEndMs": 297660,
+      "videoStartMs": 256600,
+      "durationMs": 41060,
+      "quietTailMs": 0
+    },
+    {
+      "id": "card-safety",
+      "sourceStartMs": 297660,
+      "sourceEndMs": 310740,
+      "videoStartMs": 297660,
+      "durationMs": 13080,
+      "quietTailMs": 0
+    },
+    {
+      "id": "room-communication",
+      "sourceStartMs": 310740,
+      "sourceEndMs": 320340,
+      "videoStartMs": 310740,
+      "durationMs": 9600,
+      "quietTailMs": 0
+    },
+    {
+      "id": "end",
+      "sourceStartMs": 320340,
+      "sourceEndMs": 330040,
+      "videoStartMs": 320340,
+      "durationMs": 9700,
+      "quietTailMs": 0
+    }
+  ]
+}

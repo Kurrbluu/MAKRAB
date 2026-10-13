@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pindahkan Aku Plsss! — Tutorial</title><link rel="stylesheet" href="styles.css?v=faction-colour-box-2"></head>
+<body>
+<main id="viewport"><div id="stage"><div class="frame"><i></i><i></i><i></i><i></i></div><div class="ambient-cloud cloud-left"></div><div class="ambient-cloud cloud-right"></div><div id="atmosphere" aria-hidden="true"></div><div class="border-light" aria-hidden="true"></div><div id="scene"></div><div id="filmProgress"></div></div></main>
+<div id="launch">
+  <div class="launch-frame" aria-hidden="true"></div>
+  <div class="launch-inner">
+    <span class="eyebrow">Pindahkan Aku Plsss!</span>
+    <h1>Empat faction.<br><span>Satu kemenangan.</span></h1>
+    <div class="launch-art" aria-label="Empat faction">
+      <figure><img src="assets/azure-dragon.png" alt="Azure Dragon"><figcaption>AZURE DRAGON</figcaption></figure>
+      <figure><img src="assets/vermilion-bird.png" alt="Vermilion Bird"><figcaption>VERMILION BIRD</figcaption></figure>
+      <figure><img src="assets/white-tiger.png" alt="White Tiger"><figcaption>WHITE TIGER</figcaption></figure>
+      <figure><img src="assets/black-tortoise.png" alt="Black Tortoise"><figcaption>BLACK TORTOISE</figcaption></figure>
+    </div>
+    <p>PANDUAN PERMAINAN <span>·</span> <span id="launchDuration">5:30</span> <span>·</span> BAHASA INDONESIA</p>
+    <div class="launch-actions"><button id="start" class="primary"><span class="play-icon">▶</span> PLAY VIDEO <span class="button-caption">PUTAR VIDEO DEMO</span></button><button id="record">⛶ &nbsp; Putar fullscreen</button></div>
+    <div class="chapter-shortcuts" aria-label="Tinjau bagian video"><span>LANGSUNG KE</span><button data-jump="intro">Pembuka</button><button data-jump="leaders">Leader</button><button data-jump="leader-protection">Aturan Leader</button><button data-jump="ribbons">Pita</button><button data-jump="roles">Lima role</button><button data-jump="card-pickup">Ambil kartu</button><button data-jump="rooms">Bagi ruangan</button><button data-jump="faction-spots">Sudut faksi</button><button data-jump="gm-cues">Aba-aba GM</button><button data-jump="loop">Alur permainan</button><button data-jump="inspection">Terawang</button><button data-jump="discussion">Diskusi</button><button data-jump="exchange">Pilihan Exchange</button><button data-jump="gm-selection">Pilihan GM</button><button data-jump="exchange-completion">Pindah ruangan</button><button data-jump="gambler-exchange">Gambler bertukar</button><button data-jump="final">Poin</button><button data-jump="card-safety">Aturan kartu</button><button data-jump="room-communication">Komunikasi</button></div>
+    <small>Geser timeline untuk mengulang bagian mana pun · Space untuk jeda</small>
+  </div>
+</div>
+<div id="endScreen" hidden><span class="eyebrow">TUTORIAL SELESAI</span><h2>Siap bermain?</h2><button id="replay" class="primary">↺ &nbsp; PUTAR ULANG VIDEO</button></div>
+<audio id="narrationAudio" preload="auto" hidden></audio>
+<nav id="controls" aria-label="Kontrol video"><div class="seek-wrap"><div id="chapters"></div><input id="seek" type="range" min="0" max="330.04" step="0.01" value="0" aria-label="Posisi video"><output id="hoverTime"></output></div><div class="control-row"><button id="play" aria-label="Putar atau jeda">▶ Putar</button><button id="restart" title="Ulang dari awal (R)">↺ Ulang</button><button id="previous" aria-label="Bab sebelumnya">❮</button><button id="next" aria-label="Bab berikutnya">❯</button><span id="time">0:00 / 5:30</span><span id="chapterName"></span><button id="voiceoverControl" aria-label="Bisukan narasi" aria-pressed="false" hidden>Suara: aktif</button><button id="recordControl">Rekam dari awal</button><button id="fullscreen">⛶ Fullscreen</button></div></nav><pre id="debug" hidden></pre><script src="script.js?v=faction-colour-box-2"></script></body></html>

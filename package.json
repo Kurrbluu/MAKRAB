@@ -1,0 +1,33 @@
+{
+  "name": "makrab-big-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "check": "tsc --noEmit",
+    "test": "node scripts/run-tests.mjs",
+    "build": "npm run check && vite build && node scripts/copy-tutorial.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "host": "npm run build && node --experimental-strip-types server/host.mjs",
+    "start": "node --experimental-strip-types server/host.mjs"
+  },
+  "engines": {
+    "node": "24.x"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9",
+    "@types/node": "^24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "ws": "^8.22.0"
+  }
+}

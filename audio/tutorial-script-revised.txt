@@ -1,0 +1,41 @@
+SKRIP REKAMAN TERPASANG — PINDAHKAN AKU PLSSS!
+
+Empat faksi. Dua ruangan. Satu tujuan: kumpulkan poin sebanyak-banyaknya. Selamat datang di station Pindahkan Aku Plsss!
+
+Setiap faksi memilih dua Leader. Satu berada di Room A dan satu lagi di Room B. Leader tidak mendapatkan kartu role.
+
+Tidak dapat diterawang dan tidak dapat dipindahkan selama permainan.
+
+Leader dapat dibedakan dari pemain lainnya melalui posisi pita. Leader menggunakan pita di kepala sebagai headband, sedangkan pemain lainnya memakai pita di pergelangan tangan.
+
+Ada lima role dalam permainan ini. VIP, Gambler, Warden, Civilian, dan Pretender.
+
+Setiap pemain selain Leader memilih satu kartu role yang tersedia. Simpan kartu tersebut dan rahasiakan role kalian dari pemain lain.
+
+Bagilah anggota faksi secara merata ke Room A dan Room B. Pastikan jumlah Gambler dari setiap faksi sama di kedua ruangan. Sehingga setiap Gambler memiliki pasangan dari faksi yang sama ketika pertukaran khusus dilakukan.
+
+Di setiap ruangan, empat faksi menempati sudut sesuai warna dan lokasi yang telah ditentukan. Tape di lantai menjadi batas area masing-masing faksi. Pemain harus tetap berada di areanya dan tidak boleh melewati tape kecuali mendapat aba-aba dari GM.
+
+Selama permainan, perhatikan aba-aba dari GM. Saat peluit dibunyikan, semua pemain harus berhenti, duduk, dan diam. Setelah itu, dengarkan sound cue dan perhatikan timer untuk mengetahui fase berikutnya.
+
+Permainan terdiri dari 3 fase utama, Terawang, Diskusi, dan Exchange. Urutan fase ini akan berulang hingga 3 kali Exchange.
+
+Saat fase Terawang dimulai, hanya pemain dengan role Gambler yang boleh berdiri. Pemain lainnya harus tetap duduk dan tunduk. Setiap Gambler hanya boleh melakukan satu tantangan suit dalam satu fase Terawang. Baik tantangan tersebut berakhir menang maupun kalah. Gambler dapat menantang pemain selain Leader dari faksi lain yang berada di ruangan yang sama. Pemain yang ditantang wajib menerima tantangan tersebut. suit menggunakan sistem best of three. Pemain yang lebih dulu mendapatkan dua kemenangan akan memenangkan tantangan. Jika satu ronde berakhir seri, ronde tersebut tidak dihitung dan harus diulang. Jika Gambler menang, pemain yang ditantang wajib memperlihatkan kartu role aslinya secara privat kepada Gambler. Jika Gambler kalah, kartu role pemain tersebut tidak diperlihatkan.
+
+Setelah fase Terawang selesai, permainan masuk ke fase Diskusi. Gunakan waktu ini untuk membagikan informasi yang kalian dapatkan kepada anggota faksi kalian. Informasi tersebut dapat digunakan untuk membantu Leader menentukan pemain yang sebaiknya dipilih saat Exchange.
+
+Selanjutnya adalah fase Exchange. Pada setiap Exchange, target masing-masing faksi akan diacak dan ditampilkan di layar. Hasil target berlaku sama di Room A dan Room B. Dalam satu pengacakan, setiap faksi akan menjadi target tepat satu kali, dan tidak ada faksi yang dapat menargetkan dirinya sendiri. Di setiap ruangan, Leader memilih satu pemain dari faksi target yang berada di ruangannya sendiri. Leader dan Gambler tidak dapat dipilih pada Exchange biasa. Saat Leader menentukan pilihan, pemain lainnya harus tetap duduk. Setelah Leader memilih seorang pemain, keputusan tersebut bersifat final dan tidak dapat diganti.
+
+Leader harus menentukan pilihan sebelum waktu yang diberikan GM habis. Jika Leader belum memilih saat waktu habis, GM akan memilih secara acak satu pemain yang memenuhi syarat dari faksi target di ruangan tersebut.
+
+Sebelum pemain terpilih berpindah ruangan, GM akan memeriksa kartu role asli pemain tersebut dan mencatat poin untuk faksi yang memilihnya. Setelah seluruh pilihan selesai di periksa, pemain terpilih akan berdiri dan berpindah secara bersamaan atas aba-aba GM. Pemain dari Room A berpindah ke Room B, sedangkan pemain dari Room B berpindah ke Room A. Walaupun berpindah ruangan, pemain tetap menjadi anggota faksi yang sama.
+
+Husus pada Exchange kedua, terdapat pertukaran Gambler. Sebelum pemain Exchange lainnya berpindah, Gambler dari Room A akan bertukar dengan Gambler dari faksi yang sama di Room B. Semua pertukaran Gambler dilakukan secara bersamaan atas aba-aba GM. Pertukaran Gambler tidak menghasilkan ataupun mengurangi poin. Setelah pertukaran Gambler selesai, proses Exchange biasa dilanjutkan.
+
+Point Exchange ditentukan berdasarkan role asli pemain yang dipilih. Jika pemain tersebut adalah VIP, faksi yang memilih mendapatkan 3 poin. Jika pemain tersebut adalah Pretender, faksi yang memilih kehilangan 3 poin. Jika pemain tersebut adalah Warden, faksi yang memilih mendapatkan 1 poin. Jika pemain tersebut adalah Civilian, faksi yang memilih kehilangan 1 poin. Gambler tidak memiliki nilai poin karena tidak dapat dipilih dalam Exchange biasa. Seluruh poin akan dicatat dan diperiksa oleh GM. Kalian tidak perlu menghitung skor sendiri. Point akan terus dikumpulkan selama permainan. Setelah seluruh Exchange selesai, faksi dengan total poin tertinggi menjadi pemenang.
+
+Selama permainan, kartu role harus tetap dirahasiakan. Jangan menunjukkan, menukar, atau memfoto kartu kalian. Kartu hanya boleh diperlihatkan kepada Gambler yang berhasil memenangkan Terawang dan kepada GM saat diperlukan.
+
+Pemain di Room A dan Room B juga tidak diperbolehkan berkomunikasi antar ruangan. Informasi dari ruangan lain hanya dapat dibawa oleh pemain yang berpindah melalui Exchange.
+
+Jadi, kenali role kalian, cari informasi sebanyak mungkin, bagikan informasi kepada faksi kalian, dan bantu Leader memilih pemain yang tepat. Siap bermain?

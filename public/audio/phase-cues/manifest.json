@@ -1,0 +1,35 @@
+{
+  "originalSynthesis": true,
+  "cues": [
+    {
+      "file": "terawang.wav",
+      "durationSeconds": 2.8,
+      "sampleRate": 44100,
+      "channels": 2,
+      "peakDbFS": -2.97,
+      "rmsDbFS": -18.25,
+      "voiceSource": "Fase Terawang.wav",
+      "voiceStartSeconds": 0.48
+    },
+    {
+      "file": "discussion.wav",
+      "durationSeconds": 2.54,
+      "sampleRate": 44100,
+      "channels": 2,
+      "peakDbFS": -2.97,
+      "rmsDbFS": -15.56,
+      "voiceSource": "Fase Diskusi.wav",
+      "voiceStartSeconds": 0.58
+    },
+    {
+      "file": "exchange.wav",
+      "durationSeconds": 2.99,
+      "sampleRate": 44100,
+      "channels": 2,
+      "peakDbFS": -2.97,
+      "rmsDbFS": -20.44,
+      "voiceSource": "Fase perpindahan.wav",
+      "voiceStartSeconds": 0.83
+    }
+  ]
+}
