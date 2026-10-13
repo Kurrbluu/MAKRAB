@@ -11,6 +11,8 @@ import { createCloudHandler } from '../../server/cloud-api.mjs'
 const root = resolve(fileURLToPath(new URL('../../', import.meta.url)))
 const dist = resolve(root, 'dist'), port = Number(process.env.MAKRAB_QA_PORT || 39013)
 const address = `http://127.0.0.1:${port}`
+const projectUrl = address + (process.env.MAKRAB_QA_REST_URL === '1' ? '/rest/v1/' : '')
+const sessionDelay = Math.max(0, Number(process.env.MAKRAB_QA_SESSION_DELAY_MS) || 0)
 const rewriteDestination = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')).rewrites[0].destination
 let socketsEnabled = true
 const sockets = new WebSocketServer({ noServer: true })
@@ -25,7 +27,7 @@ const database = await cloudDatabase({ onPublish: row => {
     delivered++
   }
 } })
-const handler = createCloudHandler({ configuration: { url: address, secretKey: 'sb_secret_test', publishableKey: 'sb_publishable_test', pin: '246810', sessionKey: 'makrab-big-game' }, store: database.store(), secureCookies: false })
+const handler = createCloudHandler({ configuration: { url: projectUrl, secretKey: 'sb_secret_test', publishableKey: 'sb_publishable_test', pin: '246810', sessionKey: 'makrab-big-game' }, store: database.store(), secureCookies: false })
 const mime = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.wav': 'audio/wav', '.mp4': 'video/mp4' }
 const server = createServer((request, response) => {
   const pathname = new URL(request.url, address).pathname
@@ -44,7 +46,9 @@ const server = createServer((request, response) => {
       request.query = { ...Object.fromEntries(original.searchParams), ...Object.fromEntries(destination.searchParams) }
       request.url = '/api/index.mjs'
     }
-    void handler(request, response); return
+    if (pathname === '/api/session' && sessionDelay) setTimeout(() => { void handler(request, response) }, sessionDelay)
+    else void handler(request, response)
+    return
   }
   const file = resolve(dist, `.${pathname === '/' ? '/index.html' : decodeURIComponent(pathname)}`)
   if (!file.startsWith(dist + sep) || !existsSync(file) || !statSync(file).isFile()) { response.statusCode = 404; response.end(); return }
@@ -54,6 +58,9 @@ const server = createServer((request, response) => {
   response.end(file.endsWith('/index.html') ? contents.toString().replace('<head>', '<head><meta name="makrab-session" content="shared">') : contents)
 })
 server.on('upgrade', (request, socket, head) => {
+  if (new URL(request.url, address).pathname !== '/realtime/v1/websocket') {
+    socket.end('HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n'); return
+  }
   if (!socketsEnabled) { socket.destroy(); return }
   sockets.handleUpgrade(request, socket, head, ws => sockets.emit('connection', ws, request))
 })

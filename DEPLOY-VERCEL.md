@@ -1,6 +1,6 @@
 # Online: Vercel + Supabase
 
-Kode sudah diaudit dan disiapkan. Akun/database cloud belum diverifikasi dari workspace ini; deploy di akunmu tetap perlu diuji.
+Kode sudah diaudit dan disiapkan. Setiap deployment tetap perlu diuji dengan kedua laptop dan HP sebelum acara.
 
 Vercel menampilkan game dan menerima perintah GM. Supabase menyimpan timer, undian, dan catatan; pembaruan dikirim ke kedua ruangan. Semua perangkat membuka **URL website yang sama**. Laptop Windows/macOS dan HP cukup memakai browser serta internet.
 
@@ -12,7 +12,7 @@ Vercel menampilkan game dan menerima perintah GM. Supabase menyimpan timer, undi
 
 | Nama | Isi |
 | --- | --- |
-| `SUPABASE_URL` | Project URL dari Supabase |
+| `SUPABASE_URL` | Project URL `https://YOUR_PROJECT.supabase.co`, tanpa `/rest/v1` |
 | `SUPABASE_PUBLISHABLE_KEY` | Publishable key `sb_publishable_…`; boleh diterima browser |
 | `SUPABASE_SECRET_KEY` | Secret key `sb_secret_…`; hanya untuk backend |
 | `MAKRAB_GM_PIN` | PIN **6 digit** pilihan operator |
@@ -40,7 +40,9 @@ Setelah deploy, buka `https://alamatmu.vercel.app/api/session`: respons harus be
 
 ## Debug routing dan koneksi
 
-Semua URL `/api/...` diteruskan secara eksplisit ke fungsi `/api/index` dengan parameter `__makrab_path`. Router mendukung URL asli, URL entry point hasil rewrite, serta parameter pada `request.query` Vercel. Versi perbaikan terbaru mengirim header **`X-Makrab-API: 3`**; cek header ini di DevTools → Network untuk memastikan deployment memakai kode terbaru. Versi 3 juga menangani respons 201 tanpa body dari Supabase saat menyimpan login GM dengan `return=minimal`.
+Semua URL `/api/...` diteruskan secara eksplisit ke fungsi `/api/index` dengan parameter `__makrab_path`. Router mendukung URL asli, URL entry point hasil rewrite, serta parameter pada `request.query` Vercel. Versi perbaikan terbaru mengirim header **`X-Makrab-API: 4`**; cek header ini di DevTools → Network untuk memastikan deployment memakai kode terbaru. Perbaikan mencakup respons 201 tanpa body saat menyimpan login GM dan normalisasi Project URL untuk Realtime.
+
+Jika pergantian fase tertinggal atau undian tidak terlihat di layar kedua, periksa `SUPABASE_URL`: gunakan URL project tanpa `/rest/v1`, lalu redeploy. Browser membentuk endpoint database dan Realtime dari URL tersebut. Kode terbaru juga menormalkan URL yang terlanjur berisi endpoint REST. Saat Realtime tersambung, perubahan diterima langsung lewat WebSocket; jika terputus, pembacaan HTTP mencoba setiap 1 detik tanpa menumpuk permintaan. Kedua layar tetap mengikuti waktu mulai/selesai yang sama; kecepatan internet dan respons server tetap memengaruhi keterlambatan.
 
 | Respons | Arti |
 | --- | --- |

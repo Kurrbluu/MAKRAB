@@ -128,6 +128,7 @@ export function SharedSessionProvider({ children }: { children: ReactNode }) {
       window.clearInterval(accessTimer)
       closeCloud?.()
       closeCloud = undefined
+      realtimeReady = false
       disconnected()
       try {
         metadata = await readSessionMetadata()
@@ -152,8 +153,10 @@ export function SharedSessionProvider({ children }: { children: ReactNode }) {
           await refreshAccess()
           // HTTP catches up when WebSockets are unavailable; countdowns still run locally.
           calibrationTimer = window.setInterval(() => {
-            if (localTimestamp() - lastRead >= (realtimeReady ? 10_000 : 2500)) void calibrate(baseline.current).catch(disconnected)
-          }, 2500)
+            // Do not compare the fallback interval with the previous response time:
+            // that skips a tick whenever the previous request took nonzero time.
+            if (!realtimeReady || localTimestamp() - lastRead >= 10_000) void calibrate(baseline.current).catch(disconnected)
+          }, 1000)
           accessTimer = window.setInterval(() => { void refreshAccess() }, 20_000)
           return
         }

@@ -167,6 +167,14 @@ test('SQL installs repeatedly, keeps private data inaccessible and public projec
   await assert.rejects(f.db.query("update public.makrab_public_sessions set state = state || '{\"points\":3}'::jsonb"), /check constraint/)
 })
 
+test('cloud setup normalizes a pasted Supabase REST URL before exposing browser metadata', () => {
+  const env = { SUPABASE_SECRET_KEY: configuration.secretKey,
+    SUPABASE_PUBLISHABLE_KEY: configuration.publishableKey, MAKRAB_GM_PIN: configuration.pin }
+  for (const suffix of ['', '/', '/rest/v1', '/rest/v1/']) {
+    assert.equal(cloudConfiguration({ ...env, SUPABASE_URL: configuration.url + suffix }).url, configuration.url)
+  }
+})
+
 test('JSONB ordering causes no revision churn, race-safe initialization keeps one session, and deadlines advance on reads', async t => {
   const f = await fixture(t)
   const initial = await Promise.all([f.store().transact(document => ({ document })), f.store().transact(document => ({ document }))])
@@ -204,7 +212,7 @@ for (const rewrite of ['url', 'query-only']) test(`Vercel ${rewrite} rewrite rea
   const f = await fixture(t, { rewrite })
   const initial = await f.request('/api/session?route=unrelated-client-query')
   assert.equal(initial.status, 200)
-  assert.equal(initial.headers.get('x-makrab-api'), '3')
+  assert.equal(initial.headers.get('x-makrab-api'), '4')
   assert(initial.body.state.gameId)
   assert.deepEqual((await f.request('/api/access')).body, { canControl: false })
   const unauthorized = await f.request('/api/gm/session')

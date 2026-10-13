@@ -1,4 +1,5 @@
 import type { SharedGame } from './sharedGame'
+import { supabaseProjectUrl } from './supabaseUrl.ts'
 
 export type SessionMetadata = { transport: 'sse'; online: false; authRequired: false }
   | { transport: 'supabase'; online: true; authRequired: true; url: string; publishableKey: string; sessionKey: string }
@@ -16,13 +17,13 @@ export async function readSessionMetadata(): Promise<SessionMetadata> {
   if (metadata.transport !== 'supabase' || metadata.online !== true || metadata.authRequired !== true
     || typeof metadata.url !== 'string' || typeof metadata.publishableKey !== 'string'
     || typeof metadata.sessionKey !== 'string') throw new Error('Pengaturan sesi tidak valid.')
-  return metadata
+  return { ...metadata, url: supabaseProjectUrl(metadata.url) }
 }
 
 export async function subscribeCloud(metadata: Extract<SessionMetadata, { transport: 'supabase' }>,
   onState: (state: SharedGame) => void, onStatus: (ready: boolean) => void) {
   const { createClient } = await import('@supabase/supabase-js')
-  const client = createClient(metadata.url, metadata.publishableKey, {
+  const client = createClient(supabaseProjectUrl(metadata.url), metadata.publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     realtime: { params: { eventsPerSecond: 10 } },
   })

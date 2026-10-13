@@ -2,18 +2,22 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createSupabaseStore, StorageUnavailable } from './supabase-store.mjs'
 import { advanceSession, coreTransition, scoringTransition, publicSnapshot, privateSnapshot } from './session-engine.mjs'
 import { resolveApiPath } from './api-route.mjs'
+import { supabaseProjectUrl } from '../src/lib/supabaseUrl.ts'
 
 const hash = value => createHash('sha256').update(value).digest('hex')
 const sessionLifetime = 12 * 60 * 60 * 1000
 
 export function cloudConfiguration(env = process.env) {
-  const url = env.SUPABASE_URL
+  let url = env.SUPABASE_URL
   const secretKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY
   const publishableKey = env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY
   const pin = env.MAKRAB_GM_PIN
   const sessionKey = env.MAKRAB_SESSION_KEY || 'makrab-big-game'
   if (!url || !secretKey || !publishableKey || !/^\d{6}$/.test(pin ?? '') || !/^[a-zA-Z0-9_-]{1,64}$/.test(sessionKey)) return null
-  try { if (new URL(url).protocol !== 'https:') return null } catch { return null }
+  try {
+    if (new URL(url).protocol !== 'https:') return null
+    url = supabaseProjectUrl(url)
+  } catch { return null }
   // A secret/service_role key must never become the browser's public Realtime key.
   if (publishableKey === secretKey || publishableKey.startsWith('sb_secret_')) return null
   try {
@@ -31,7 +35,7 @@ export function createCloudHandler({ configuration = cloudConfiguration(), store
     const json = (status, value) => {
       response.setHeader('Cache-Control', 'no-store')
       response.setHeader('X-Content-Type-Options', 'nosniff')
-      response.setHeader('X-Makrab-API', '3')
+      response.setHeader('X-Makrab-API', '4')
       response.setHeader('Content-Type', 'application/json; charset=utf-8')
       response.statusCode = status
       response.end(JSON.stringify(value.state ? { ...value, serverReceivedAt: receivedAt, serverNow: clock() } : value))
