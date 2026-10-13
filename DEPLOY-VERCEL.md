@@ -38,6 +38,38 @@ Tetapkan **satu operator** untuk timer/fase. GM lain memakai panel poin. Layar t
 
 Setelah deploy, buka `https://alamatmu.vercel.app/api/session`: respons harus berupa JSON dengan `state` dan `serverNow`. Jika 503, periksa environment, status project Supabase, dan apakah SQL sudah dijalankan. Project yang belum terhubung tidak siap untuk sinkronisasi walaupun halaman Home bisa tampil. Perangkat harus memakai domain Production yang sama agar sesi dan cookie konsisten.
 
+## Debug routing dan koneksi
+
+Semua URL `/api/...` diteruskan secara eksplisit ke fungsi `/api/index` dengan parameter `__makrab_path`. Router mendukung URL asli, URL entry point hasil rewrite, serta parameter pada `request.query` Vercel. Versi perbaikan mengirim header **`X-Makrab-API: 2`**; cek header ini di DevTools → Network untuk memastikan deployment memakai kode terbaru.
+
+| Respons | Arti |
+| --- | --- |
+| `/api/session` → 200, `state` dan `serverNow` | Sesi publik berhasil dibaca dari Supabase |
+| `/api/access` → `canControl:false` sebelum login | Normal; perangkat belum masuk sebagai GM |
+| `/api/gm/session` → 401, `GM_LOGIN_REQUIRED` | Normal sebelum login atau setelah cookie berakhir |
+| 404, `API_NOT_FOUND` | URL/parameter routing tidak dikenali; belum merupakan kegagalan membaca database |
+| 503, `SUPABASE_HTTP_ERROR` | Permintaan database ditolak; `upstreamStatus` membantu membedakan 401/403 (key/izin) dan 404 (tabel/RPC/schema) |
+| 503, `INVALID_STORED_SESSION` | Row ada, tetapi struktur dokumen tidak sesuai aturan aplikasi; data tidak direset otomatis |
+| 503, `SUPABASE_UNAVAILABLE` | Koneksi database gagal atau timeout |
+
+Setelah push dan redeploy, uji pada **domain Production yang sama**: buka `/api/session` tanpa login; masuk lewat `/#/gm`; cek `/api/access` menjadi `canControl:true` dan `/api/gm/session` menjadi 200 pada browser yang sama. Cookie GM tidak otomatis dibagikan ke perangkat lain. Lalu buka `/#/game` pada kedua laptop dan uji perubahan timer/fase serta input dari GM kedua. Secret key dan PIN tidak perlu ditampilkan dalam log atau dibagikan ke chat.
+
+Jika perlu memeriksa bentuk row, jalankan query read-only ini di SQL Editor. Output hanya menampilkan tipe/kelengkapan struktur, tanpa poin, identitas GM, token, atau key:
+
+```sql
+select session_key, store_version,
+  jsonb_typeof(document) as document_type,
+  document ->> 'version' as document_version,
+  jsonb_typeof(document -> 'state') as state_type,
+  jsonb_typeof(document -> 'scoring') as scoring_type,
+  jsonb_typeof(document -> 'commands') as commands_type,
+  (document #>> '{state,gameId}' = document #>> '{scoring,gameId}') as game_ids_match
+from public.makrab_game_sessions
+where session_key = 'makrab-big-game';
+```
+
+Dokumen yang valid memiliki versi `1`, `state` dan `scoring` bertipe `object`, `commands` bertipe `array`, dan `game_ids_match` bernilai true. Pemeriksaan ini merupakan langkah awal; validasi aplikasi juga memeriksa isi timer, undian, dan scoring. Jangan mengosongkan tabel untuk mencoba menghilangkan error karena progres dapat hilang.
+
 ## Biaya dan backup
 
 Bisa mulai dengan paket gratis sesuai kuota. [Vercel Hobby](https://vercel.com/docs/plans/hobby) untuk penggunaan pribadi nonkomersial; [Supabase Free](https://supabase.com/pricing) dapat pause setelah seminggu tidak aktif dan tidak menyertakan backup otomatis. Cek dashboard sebelum acara; domain berbayar tidak wajib. Ketentuan diperiksa 12 Oktober 2026.

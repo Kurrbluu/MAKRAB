@@ -11,6 +11,7 @@ import { createCloudHandler } from '../../server/cloud-api.mjs'
 const root = resolve(fileURLToPath(new URL('../../', import.meta.url)))
 const dist = resolve(root, 'dist'), port = Number(process.env.MAKRAB_QA_PORT || 39013)
 const address = `http://127.0.0.1:${port}`
+const rewriteDestination = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')).rewrites[0].destination
 let socketsEnabled = true
 const sockets = new WebSocketServer({ noServer: true })
 let reads = 0, delivered = 0
@@ -37,6 +38,12 @@ const server = createServer((request, response) => {
   if (pathname === '/__qa/stats') { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify({ reads, delivered, sockets: sockets.clients.size })); return }
   if (pathname.startsWith('/api/')) {
     if (pathname === '/api/session') reads++
+    if (process.env.MAKRAB_QA_REWRITE === '1') {
+      const original = new URL(request.url, address)
+      const destination = new URL(rewriteDestination.replace(':path*', original.pathname.slice('/api/'.length)), address)
+      request.query = { ...Object.fromEntries(original.searchParams), ...Object.fromEntries(destination.searchParams) }
+      request.url = '/api/index.mjs'
+    }
     void handler(request, response); return
   }
   const file = resolve(dist, `.${pathname === '/' ? '/index.html' : decodeURIComponent(pathname)}`)

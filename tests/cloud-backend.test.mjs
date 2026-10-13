@@ -6,16 +6,26 @@ import { createCloudHandler, cloudConfiguration } from '../server/cloud-api.mjs'
 import { createSessionDocument, advanceSession, coreTransition, scoringTransition, assertSessionDocument } from '../server/session-engine.mjs'
 import { FACTION_IDS } from '../src/data/factionIds.ts'
 import { createServerClock } from '../src/lib/serverClock.ts'
+import { readFileSync } from 'node:fs'
+import { createSupabaseStore } from '../server/supabase-store.mjs'
 
 const configuration = { url: 'https://test.supabase.co', secretKey: 'sb_secret_test', publishableKey: 'sb_publishable_test', pin: '246810', sessionKey: 'makrab-big-game' }
-async function fixture(t) {
+async function fixture(t, { rewrite } = {}) {
   let now = 1_000_000
   const clock = () => now
   const database = await cloudDatabase({ clock })
   const handlers = [0, 1].map(() => createCloudHandler({ configuration, store: database.store(), clock }))
+  const routeConfig = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'))
   const server = createServer((request, response) => {
     const index = request.url.startsWith('/two') ? 1 : 0
     request.url = request.url.replace(/^\/(one|two)/, '')
+    if (rewrite) {
+      const original = new URL(request.url, 'https://localhost')
+      const wildcard = original.pathname.slice('/api/'.length)
+      const destination = new URL(routeConfig.rewrites[0].destination.replace(':path*', wildcard), 'https://localhost')
+      request.query = { ...Object.fromEntries(original.searchParams), ...Object.fromEntries(destination.searchParams) }
+      request.url = rewrite === 'query-only' ? Object.keys(routeConfig.functions)[0].replace(/^/, '/') : destination.pathname + destination.search
+    }
     void handlers[index](request, response)
   })
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
@@ -188,4 +198,65 @@ test('private-field validation refuses contaminated public state; clock excludes
   const core = coreTransition(document, { commandId: 'begin', expectedRevision: 0, command: { type: 'begin' } }, 1_000_000)
   assert.equal(core.status, 200)
   assert.equal(scoringTransition(document, { commandId: 'bad', gameId: document.state.gameId, command: { type: 'scoreAdd', role: 'leader' } }, 'GM', 1_000_000).status, 400)
+})
+
+for (const rewrite of ['url', 'query-only']) test(`Vercel ${rewrite} rewrite reads the public session and preserves GM login, cookies and both rooms`, async t => {
+  const f = await fixture(t, { rewrite })
+  const initial = await f.request('/api/session?route=unrelated-client-query')
+  assert.equal(initial.status, 200)
+  assert.equal(initial.headers.get('x-makrab-api'), '2')
+  assert(initial.body.state.gameId)
+  assert.deepEqual((await f.request('/api/access')).body, { canControl: false })
+  const unauthorized = await f.request('/api/gm/session')
+  assert.equal(unauthorized.status, 401)
+  assert.equal(unauthorized.body.code, 'GM_LOGIN_REQUIRED')
+  const one = (await f.login('Operator One')).cookie.split(';')[0]
+  const two = (await f.login('Operator Two', 'two')).cookie.split(';')[0]
+  assert.deepEqual((await f.request('/api/access', { cookie: one })).body, { canControl: true })
+  assert.equal((await f.request('/api/gm/session', { cookie: two, instance: 'two' })).status, 200)
+  assert.equal((await f.gm(one, { type: 'scoresEnable', enabled: true })).status, 200)
+  assert.equal((await f.core(one, { type: 'phase', index: 2, start: true })).status, 200)
+  const inputs = await Promise.all([
+    f.gm(one, { type: 'scoreAdd', expectedRound: 1, room: 'a', factionId: FACTION_IDS[0], role: 'vip' }),
+    f.gm(two, { type: 'scoreAdd', expectedRound: 1, room: 'b', factionId: FACTION_IDS[0], role: 'pretender' }, { instance: 'two' }),
+  ])
+  assert(inputs.every(value => value.status === 200))
+  const privateState = await f.request('/api/gm/session', { cookie: one })
+  assert.equal(privateState.body.scoring.entries.length, 2)
+  assert.equal(privateState.body.totals[FACTION_IDS[0]], 0)
+  const publicState = (await f.request('/api/session', { instance: 'two' })).body
+  assert.equal(publicState.state.rundown.phaseIndex, 2)
+  assert(!/"(scoring|totals|entries|actor|history|gmPin)"/.test(JSON.stringify(publicState)))
+  assert.equal((await f.request('/api/does-not-exist')).body.code, 'API_NOT_FOUND')
+  assert.equal((await f.request('/api/gm/logout', { cookie: one, method: 'POST' })).status, 200)
+  assert.equal((await f.request('/api/gm/session', { cookie: one, instance: 'two' })).status, 401)
+})
+
+test('invalid stored documents report a safe diagnostic without resetting database state', async t => {
+  const f = await fixture(t, { rewrite: 'query-only' })
+  await f.state()
+  const before = (await f.db.query('select document from public.makrab_game_sessions')).rows[0].document
+  const corrupt = { ...before, scoring: {} }
+  await f.db.query('update public.makrab_game_sessions set document=$1', [corrupt])
+  const response = await f.request('/api/session')
+  assert.equal(response.status, 503)
+  assert.equal(response.body.code, 'INVALID_STORED_SESSION')
+  assert(!('state' in response.body))
+  assert.deepEqual((await f.db.query('select document from public.makrab_game_sessions')).rows[0].document, corrupt)
+})
+
+test('Supabase permission failures are distinct from routing and never echo upstream secrets or data', async t => {
+  const captured = []
+  const store = createSupabaseStore({ url: configuration.url, secretKey: configuration.secretKey, fetchImpl: async () => Response.json({ error: 'private-upstream-sentinel' }, { status: 403 }) })
+  const handler = createCloudHandler({ configuration, store, log: (...args) => { captured.push(args) } })
+  let status, value
+  await handler({ url: '/api/index.mjs', query: { __makrab_path: 'session' }, method: 'GET', headers: { host: 'localhost' }, socket: {} },
+    { setHeader() {}, set statusCode(next) { status = next }, end(raw) { value = JSON.parse(raw) } })
+  assert.equal(status, 503)
+  assert.equal(value.code, 'SUPABASE_HTTP_ERROR')
+  assert.equal(value.upstreamStatus, 403)
+  const output = JSON.stringify([value, captured])
+  assert(!output.includes('private-upstream-sentinel'))
+  assert(!output.includes(configuration.secretKey))
+  assert(!output.includes(configuration.pin))
 })

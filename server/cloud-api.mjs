@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import { createSupabaseStore, StorageUnavailable } from './supabase-store.mjs'
 import { advanceSession, coreTransition, scoringTransition, publicSnapshot, privateSnapshot } from './session-engine.mjs'
+import { resolveApiPath } from './api-route.mjs'
 
 const hash = value => createHash('sha256').update(value).digest('hex')
 const sessionLifetime = 12 * 60 * 60 * 1000
@@ -30,15 +31,13 @@ export function createCloudHandler({ configuration = cloudConfiguration(), store
     const json = (status, value) => {
       response.setHeader('Cache-Control', 'no-store')
       response.setHeader('X-Content-Type-Options', 'nosniff')
+      response.setHeader('X-Makrab-API', '2')
       response.setHeader('Content-Type', 'application/json; charset=utf-8')
       response.statusCode = status
       response.end(JSON.stringify(value.state ? { ...value, serverReceivedAt: receivedAt, serverNow: clock() } : value))
     }
     try {
-      const url = new URL(request.url, 'https://localhost')
-      const route = url.searchParams.get('route')
-      const apiPath = url.pathname.replace(/\/+$/, '')
-      const pathname = apiPath === '/api' || apiPath === '/api/index' ? `/api/${route ?? ''}` : apiPath
+      const pathname = resolveApiPath(request)
       if (request.headers.origin) {
         let origin
         try { origin = new URL(request.headers.origin) } catch { json(403, { error: 'Origin tidak diizinkan.' }); return }
@@ -87,7 +86,7 @@ export function createCloudHandler({ configuration = cloudConfiguration(), store
       const login = token ? await storage.login(hash(token), fingerprint) : null
       if (pathname === '/api/access' && request.method === 'GET') { json(200, { canControl: Boolean(login) }); return }
       if (pathname === '/api/command' || pathname.startsWith('/api/gm/')) {
-        if (!login) { json(401, { error: 'Masuk melalui GM Access untuk mengendalikan permainan.' }); return }
+        if (!login) { json(401, { error: 'Masuk melalui GM Access untuk mengendalikan permainan.', code: 'GM_LOGIN_REQUIRED' }); return }
         if (pathname === '/api/gm/logout' && request.method === 'POST') {
           await storage.logout(hash(token)); response.setHeader('Set-Cookie', cookie('', 0)); json(200, { ok: true }); return
         }
@@ -101,11 +100,13 @@ export function createCloudHandler({ configuration = cloudConfiguration(), store
           json(result.status, result.body); return
         }
       }
-      json(404, { error: 'Alamat API tidak ditemukan.' })
+      json(404, { error: 'Alamat API tidak ditemukan.', code: 'API_NOT_FOUND' })
     } catch (error) {
       // Do not expose database responses, keys, or private state to public clients.
-      if (!(error instanceof StorageUnavailable)) log('MAKRAB cloud request failed:', error?.name ?? 'Error')
-      json(503, { error: 'Sesi online belum tersedia. Periksa koneksi dan pengaturan backend.' })
+      const code = error instanceof StorageUnavailable ? error.code : 'SESSION_REQUEST_FAILED'
+      const upstreamStatus = error instanceof StorageUnavailable ? error.status : undefined
+      log('MAKRAB cloud request failed:', { code, ...(upstreamStatus ? { upstreamStatus } : {}) })
+      json(503, { error: 'Sesi online belum tersedia. Periksa koneksi dan pengaturan backend.', code, ...(upstreamStatus ? { upstreamStatus } : {}) })
     }
   }
 }
