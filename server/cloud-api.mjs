@@ -37,7 +37,8 @@ export function createCloudHandler({ configuration = cloudConfiguration(), store
     try {
       const url = new URL(request.url, 'https://localhost')
       const route = url.searchParams.get('route')
-      const pathname = url.pathname === '/api' || url.pathname === '/api/index' ? `/api/${route ?? ''}` : url.pathname
+      const apiPath = url.pathname.replace(/\/+$/, '')
+      const pathname = apiPath === '/api' || apiPath === '/api/index' ? `/api/${route ?? ''}` : apiPath
       if (request.headers.origin) {
         let origin
         try { origin = new URL(request.headers.origin) } catch { json(403, { error: 'Origin tidak diizinkan.' }); return }

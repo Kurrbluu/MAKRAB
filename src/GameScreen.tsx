@@ -477,7 +477,7 @@ export default function GameScreen() {
   }, [gameFinished, results?.kind, results?.round])
 
   if (shared && !shared.snapshot) return <main className="home timer-screen timer-screen--terawang shared-loading" data-sync-state={shared.connection}>
-    <section role="status"><h1>Menyiapkan permainan</h1><p>Menghubungkan sesi bersama…</p></section>
+    <section role="status"><h1>Menyiapkan permainan</h1><p>Menghubungkan sesi bersama…</p>{shared.error && <p>{shared.error}</p>}</section>
   </main>
 
   return <main ref={mainRef} tabIndex={-1} className={`home home--landing timer-screen timer-screen--${phase.timerId}${gameFinished ? ' timer-screen--finished' : ''}${results ? ' timer-screen--results' : ''}${sharedNotice ? ' timer-screen--with-notice' : ''}`} data-phase-type={phase.timerId} data-game-state={results ? 'results' : gameFinished ? 'finished' : 'playing'} data-sync-state={shared?.connection} data-session-revision={shared?.snapshot?.state.revision} data-session-id={shared?.snapshot?.state.gameId} style={{ '--timer-color': gameFinished ? '#cbb789' : config.color } as CSSProperties} aria-labelledby={results ? 'ranking-title' : gameFinished ? 'game-end-title' : 'active-phase-title'}>

@@ -52,14 +52,16 @@ export function SharedSessionProvider({ children }: { children: ReactNode }) {
   const onlineRef = useRef(false)
   const [canControl, setCanControl] = useState(false)
   const accessRef = useRef(false)
+  const accessEpoch = useRef(0)
   const refreshRef = useRef<(() => Promise<void>) | null>(null)
 
   const refreshAccess = useCallback(async () => {
     if (!onlineRef.current) return
+    const epoch = ++accessEpoch.current
     try {
       const response = await fetch('/api/access', { cache: 'no-store', signal: AbortSignal.timeout(5000) })
       const access = response.ok && (await response.json()).canControl === true
-      if (mounted.current) { accessRef.current = access; setCanControl(access) }
+      if (mounted.current && epoch === accessEpoch.current) { accessRef.current = access; setCanControl(access) }
     } catch { /* Access will be checked again on focus or the next refresh. */ }
   }, [])
 
@@ -167,8 +169,9 @@ export function SharedSessionProvider({ children }: { children: ReactNode }) {
         })
         source.onerror = disconnected
         calibrationTimer = window.setInterval(() => { void calibrate(baseline.current).catch(disconnected) }, 10_000)
-      } catch {
+      } catch (failure) {
         disconnected()
+        if (!cancelled) setError(failure instanceof Error ? failure.message : 'Sesi belum berhasil tersambung.')
         if (!cancelled) reconnectTimer = window.setTimeout(connect, 1500)
       }
     }
@@ -189,6 +192,7 @@ export function SharedSessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
       mounted.current = false
+      accessEpoch.current++
       source?.close()
       closeCloud?.()
       refreshRef.current = null

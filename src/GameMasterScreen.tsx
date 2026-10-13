@@ -150,7 +150,9 @@ export default function GameMasterScreen() {
         body: JSON.stringify({ commandId, gameId, command }), signal: AbortSignal.timeout(12_000) })
       const incoming: GMData = await response.json()
       if (response.status === 401) { setData(null); window.dispatchEvent(new Event('makrab:gm-auth')); setMessage(incoming.error || 'Masuk kembali dengan PIN GM.'); return }
-      if (incoming.scoring && (!liveGameId.current || incoming.scoring.gameId === liveGameId.current)) setData(incoming)
+      if (incoming.scoring && (!liveGameId.current || incoming.scoring.gameId === liveGameId.current)) {
+        setData(current => current && current.scoring.gameId === incoming.scoring.gameId && current.scoring.revision > incoming.scoring.revision ? current : incoming)
+      }
       if (!response.ok) {
         setMessage(incoming.error || 'Hasil belum disimpan.')
         if (response.status === 409) { setRole(null); setDeleting(false); setClearDraft(null); if (draft?.kind === 'add') closeEntry() }

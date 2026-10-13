@@ -30,7 +30,7 @@ npm run build
 npm run preview
 ```
 
-Build menjalankan pemeriksaan TypeScript lalu menghasilkan situs statis di `dist/`. Folder tersebut dapat digunakan untuk hosting statis ketika situs siap dipublikasikan. Sesi bersama juga membutuhkan server; hosting `dist/` saja menjalankan mode mandiri.
+Build menjalankan pemeriksaan TypeScript lalu menghasilkan situs statis di `dist/`. `npm run build` menyiapkan mode mandiri; `npm run build:online` menyiapkan sesi bersama secara eksplisit dan dipakai oleh `vercel.json`. Sesi bersama juga membutuhkan backend: server lokal atau Supabase melalui API Vercel. Mode online tidak memakai localStorage sebagai sumber utama fase/poin.
 
 ## Sesi bersama untuk dua ruangan
 

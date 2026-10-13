@@ -44,6 +44,9 @@ test('online metadata exposes only public keys, and public viewers cannot contro
   assert.equal((await f.core(undefined, { type: 'begin' })).status, 401)
   assert.equal((await f.state()).active, false)
   assert.equal((await f.request('/api?route=session')).status, 200)
+  assert.equal((await f.request('/api/?route=session')).status, 200)
+  assert.equal((await f.request('/api/index/?route=session')).status, 200)
+  assert.equal((await f.request('/api/session/')).status, 200)
   assert.equal((await f.request('/api/session')).headers.get('cache-control'), 'no-store')
 })
 

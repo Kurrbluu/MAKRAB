@@ -8,6 +8,7 @@
     "check": "tsc --noEmit",
     "test": "node scripts/run-tests.mjs",
     "build": "npm run check && vite build && node scripts/copy-tutorial.mjs",
+    "build:online": "npm run check && node scripts/build-online.mjs && node scripts/copy-tutorial.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "host": "npm run build && node --experimental-strip-types server/host.mjs",
     "start": "node --experimental-strip-types server/host.mjs"
