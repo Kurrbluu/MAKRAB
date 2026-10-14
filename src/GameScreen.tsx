@@ -14,6 +14,7 @@ import type { TimerDialSave } from './components/TimerDialAdjuster'
 import { PhaseDisplayFrame, PhaseJourney, PhasePanelArtwork, TimerEngraving } from './components/PhaseArtwork'
 import useGameSound from './hooks/useGameSound'
 import useRandomizerSound from './hooks/useRandomizerSound'
+import useSharedPhaseSound from './hooks/useSharedPhaseSound'
 import { factions } from './data/game'
 import { GAME_PHASES } from './data/gamePhases'
 import type { ExchangeNumber, GamePhase } from './data/gamePhases'
@@ -116,8 +117,10 @@ export default function GameScreen() {
   const initialClock = bank.timers[phase.timerId]
   const cueTracker = useRef(createPhaseCueTracker(rundown.phaseIndex, initialClock.deadline !== null || initialClock.remainingMs < initialClock.durationMs))
   const pendingPhaseCue = useRef<{ phaseIndex: number; id: TimerId; requested: boolean } | null>(null)
-  const revealSound = useRandomizerSound({ active: animatingRound !== null && (!shared || shared.connection === 'connected'), stopped: rouletteStopped, animationKey: drawAnimationKey,
+  useRandomizerSound({ active: animatingRound !== null && (!shared || shared.connection === 'connected'), stopped: rouletteStopped, animationKey: drawAnimationKey,
     settings: cueSettings, status: audioStatus, timeline })
+  useSharedPhaseSound({ state: shared?.snapshot?.state, liveCue: shared?.liveCue,
+    connected: shared?.connection === 'connected', now: shared?.now, settings: cueSettings, status: audioStatus })
 
   useEffect(() => {
     if (shared) return
@@ -135,40 +138,6 @@ export default function GameScreen() {
     })
   }, [rundown.phaseIndex, phase.timerId, bank.timers, cueSettings.enabled, cueSettings.volume, audioStatus])
 
-  const previousSharedCue = useRef(shared?.snapshot?.state.cue?.id)
-  useEffect(() => {
-    if (!shared) return
-    const id = shared.snapshot?.state.cue?.id
-    if (previousSharedCue.current && previousSharedCue.current !== id) stopPhaseCue()
-    previousSharedCue.current = id
-  }, [shared?.snapshot?.state.cue?.id])
-
-  const sharedCueSeen = useRef(new Set<string>())
-  const sharedCuePending = useRef<{ id: string; phaseIndex: number; timerId: TimerId; performanceStart: number; requested: boolean } | null>(null)
-  useEffect(() => {
-    if (!shared) return
-    const cue = shared.liveCue
-    if (cue && !sharedCueSeen.current.has(cue.id)) {
-      sharedCueSeen.current.add(cue.id)
-      sharedCuePending.current = { ...cue, performanceStart: performance.now() + cue.startsAt - shared.now(), requested: false }
-    }
-    const pending = sharedCuePending.current
-    if (!pending) return
-    if (shared.connection !== 'connected' || !cueSettings.enabled || pending.phaseIndex !== rundown.phaseIndex
-      || bank.timers[phase.timerId].deadline === null || performance.now() - pending.performanceStart > 4000) {
-      sharedCuePending.current = null
-      return
-    }
-    if (pending.requested || audioStatus.state !== 'ready') return
-    pending.requested = true
-    void playPhaseCue(pending.timerId, cueSettings.volume, pending.performanceStart).then(played => {
-      if (sharedCuePending.current === pending) {
-        if (played) sharedCuePending.current = null
-        else pending.requested = false
-      }
-    })
-  }, [shared?.liveCue?.id, shared?.connection, cueSettings.enabled, cueSettings.volume, audioStatus, rundown.phaseIndex, phase.timerId, bank.timers])
-
   const previousSharedGame = useRef(shared?.snapshot?.state.gameId)
   useLayoutEffect(() => {
     if (!shared) return
@@ -177,7 +146,6 @@ export default function GameScreen() {
       previousSharedGame.current = shared.snapshot?.state.gameId
       setDraft(null)
       setDialPreview(null)
-      sharedCuePending.current = null
       stopPhaseCue()
       stopRandomizerSound()
     }
@@ -239,8 +207,7 @@ export default function GameScreen() {
 
   const updateDrawProgress = useCallback((settled: boolean[]) => {
     setDrawProgress(settled)
-    revealSound(settled)
-  }, [revealSound])
+  }, [])
 
   const finishDrawing = useCallback(() => {
     if (shared) return

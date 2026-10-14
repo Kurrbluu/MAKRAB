@@ -12,7 +12,7 @@ const root = resolve(fileURLToPath(new URL('../../', import.meta.url)))
 const dist = resolve(root, 'dist'), port = Number(process.env.MAKRAB_QA_PORT || 39013)
 const address = `http://127.0.0.1:${port}`
 const projectUrl = address + (process.env.MAKRAB_QA_REST_URL === '1' ? '/rest/v1/' : '')
-const sessionDelay = Math.max(0, Number(process.env.MAKRAB_QA_SESSION_DELAY_MS) || 0)
+let sessionDelay = Math.max(0, Number(process.env.MAKRAB_QA_SESSION_DELAY_MS) || 0)
 const rewriteDestination = JSON.parse(readFileSync(resolve(root, 'vercel.json'), 'utf8')).rewrites[0].destination
 let socketsEnabled = true
 const sockets = new WebSocketServer({ noServer: true })
@@ -37,6 +37,10 @@ const server = createServer((request, response) => {
     response.end('ok'); return
   }
   if (pathname === '/__qa/sockets-on') { socketsEnabled = true; response.end('ok'); return }
+  if (pathname === '/__qa/session-delay') {
+    sessionDelay = Math.max(0, Math.min(2000, Number(new URL(request.url, address).searchParams.get('ms')) || 0))
+    response.end('ok'); return
+  }
   if (pathname === '/__qa/stats') { response.setHeader('Content-Type', 'application/json'); response.end(JSON.stringify({ reads, delivered, sockets: sockets.clients.size })); return }
   if (pathname.startsWith('/api/')) {
     if (pathname === '/api/session') reads++

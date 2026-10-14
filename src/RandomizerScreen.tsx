@@ -55,10 +55,10 @@ export default function RandomizerScreen({ onOpenGuide }: { onOpenGuide: () => v
   const isShuffling = shuffle !== null
   const { settings: cueSettings, status: audioStatus, changeSettings: changeCueSettings } = useGameSound()
   const [cueSettingsOpen, setCueSettingsOpen] = useState(false)
-  const revealSound = useRandomizerSound({ active: isShuffling, stopped: shuffle?.stopped ?? false, animationKey,
+  useRandomizerSound({ active: isShuffling, stopped: shuffle?.stopped ?? false, animationKey,
     settings: cueSettings, status: audioStatus, launchDelayMs: 0, spinDurationMs: cardTiming.revealStart + cardTiming.revealDuration })
   const revealedTargets = useTargetReveal({ active: isShuffling, stopped: shuffle?.stopped ?? false,
-    targets: shuffle?.targets, onFinish: () => { if (shuffle) finishShuffle(shuffle.targets) }, onProgress: revealSound })
+    targets: shuffle?.targets, onFinish: () => { if (shuffle) finishShuffle(shuffle.targets) } })
 
   useLayoutEffect(() => {
     if (!shuffle || !stageRef.current) { setDrawLayout(null); return }

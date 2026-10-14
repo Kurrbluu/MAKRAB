@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { EXCHANGE_PRESENTATION } from '../lib/exchangePresentation'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { EXCHANGE_PRESENTATION, EXCHANGE_REVEAL_ORDER } from '../lib/exchangePresentation'
 import { playRandomizerSound, stopRandomizerSound } from '../lib/phaseCueAudio'
 import type { CueAudioStatus, PhaseCueSettings } from '../lib/phaseCueAudio'
-import { revealedAt } from '../lib/presentationTimeline'
 import type { PresentationTimeline } from '../lib/presentationTimeline'
 
 type Options = {
@@ -18,21 +17,11 @@ type Options = {
 
 export default function useRandomizerSound({ active, stopped, animationKey, settings, status,
   launchDelayMs = EXCHANGE_PRESENTATION.launchDelayMs, spinDurationMs = EXCHANGE_PRESENTATION.spinDurationMs, timeline }: Options) {
-  const spinRef = useRef<{ startsAt: number; requested: boolean } | null>(null)
-  const revealedRef = useRef<boolean[]>(timeline ? revealedAt(timeline.startsAt, timeline.now()) : [false, false, false, false])
-  const previousAnimation = useRef(animationKey)
-  if (previousAnimation.current !== animationKey) {
-    previousAnimation.current = animationKey
-    revealedRef.current = timeline ? revealedAt(timeline.startsAt, timeline.now()) : [false, false, false, false]
-  }
-  const settingsRef = useRef(settings)
-  const activeRef = useRef(active)
-  useLayoutEffect(() => { settingsRef.current = settings; activeRef.current = active }, [settings, active])
+  const spinRef = useRef<{ startsAt: number; requested: boolean; results: Set<number>; epoch: number } | null>(null)
 
   useLayoutEffect(() => {
     const elapsed = timeline ? timeline.now() - timeline.startsAt : 0
-    revealedRef.current = timeline ? revealedAt(timeline.startsAt, timeline.now()) : [false, false, false, false]
-    spinRef.current = active ? { startsAt: performance.now() - elapsed + launchDelayMs, requested: false } : null
+    spinRef.current = active ? { startsAt: performance.now() - elapsed + launchDelayMs, requested: false, results: new Set(), epoch: 0 } : null
     return stopRandomizerSound
   }, [active, animationKey, launchDelayMs, timeline])
 
@@ -40,18 +29,30 @@ export default function useRandomizerSound({ active, stopped, animationKey, sett
   // Join the existing motion at its current offset, with no reroll or animation restart.
   useEffect(() => {
     const spin = spinRef.current
-    if (!active || stopped || !settings.enabled || status.state !== 'ready' || !spin || spin.requested) return
-    spin.requested = true
-    void playRandomizerSound('spin', settings.volume, spin.startsAt, EXCHANGE_PRESENTATION.spinDurationMs / spinDurationMs)
-      .then(played => { if (!played && spinRef.current === spin) spin.requested = false })
+    if (!active || !spin) return
+    if (!settings.enabled || status.state !== 'ready') {
+      spin.epoch++
+      spin.requested = false
+      spin.results.clear()
+      stopRandomizerSound()
+      return
+    }
+    const epoch = spin.epoch
+    if (!stopped && !spin.requested) {
+      spin.requested = true
+      void playRandomizerSound('spin', settings.volume, spin.startsAt, EXCHANGE_PRESENTATION.spinDurationMs / spinDurationMs)
+        .then(played => { if (!played && spinRef.current === spin && spin.epoch === epoch) spin.requested = false })
+    }
+    // Schedule on the audio clock rather than waiting for render callbacks. A busy
+    // frame must not bunch four reveals into multiple closing gongs.
+    EXCHANGE_REVEAL_ORDER.forEach((_, rank) => {
+      if (spin.results.has(rank)) return
+      spin.results.add(rank)
+      const startsAt = spin.startsAt + spinDurationMs + rank * EXCHANGE_PRESENTATION.revealGapMs
+      if (startsAt < performance.now()) return
+      void playRandomizerSound(rank === EXCHANGE_REVEAL_ORDER.length - 1 ? 'complete' : 'result', settings.volume, startsAt)
+        .then(played => { if (!played && spinRef.current === spin && spin.epoch === epoch) spin.results.delete(rank) })
+    })
   }, [active, stopped, animationKey, settings.enabled, settings.volume, status, spinDurationMs])
 
-  return useCallback((revealed: boolean[]) => {
-    const previous = revealedRef.current
-    revealedRef.current = revealed
-    if (!activeRef.current || !settingsRef.current.enabled) return
-    revealed.forEach((isRevealed, index) => {
-      if (isRevealed && !previous[index]) void playRandomizerSound(revealed.every(Boolean) ? 'complete' : 'result', settingsRef.current.volume)
-    })
-  }, [])
 }

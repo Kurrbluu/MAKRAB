@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
-  getCueAudioStatus, loadPhaseCueSettings, savePhaseCueSettings, setRandomizerVolume,
+  getCueAudioStatus, loadPhaseCueSettings, savePhaseCueSettings, setCueVolume,
   stopPhaseCue, stopRandomizerSound, subscribeCueAudioStatus, unlockPhaseCueAudio,
 } from '../lib/phaseCueAudio'
 import type { PhaseCueSettings } from '../lib/phaseCueAudio'
@@ -27,7 +27,7 @@ export default function useGameSound() {
     setSettings(next)
     savePhaseCueSettings(next)
     if (!next.enabled) { stopPhaseCue(); stopRandomizerSound() }
-    else setRandomizerVolume(next.volume)
+    else setCueVolume(next.volume)
     void unlockPhaseCueAudio()
   }
 

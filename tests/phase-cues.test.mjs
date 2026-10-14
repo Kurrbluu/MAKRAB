@@ -11,6 +11,7 @@ test('the three cues map the supplied voice filenames to Terawang, discussion an
   ])
   const manifest = JSON.parse(readFileSync(new URL('../public/audio/phase-cues/manifest.json', import.meta.url)))
   assert.deepEqual(manifest.cues.map(cue => cue.voiceSource), ['Fase Terawang.wav', 'Fase Diskusi.wav', 'Fase perpindahan.wav'])
+  assert.deepEqual(PHASE_CUES.map(cue => cue.voiceStartMs), manifest.cues.map(cue => cue.voiceStartSeconds * 1000))
 })
 
 test('the phase announcement waits through roulette and its result hold until the first countdown actually starts', () => {

@@ -145,8 +145,10 @@ export function SharedSessionProvider({ children }: { children: ReactNode }) {
             catch { void calibrate(true).catch(disconnected) }
           }, ready => {
             if (cancelled) return
+            const lostRealtime = realtimeReady && !ready
             realtimeReady = ready
-            if (ready) void calibrate(baseline.current).catch(disconnected)
+            // Catch up as soon as an established stream drops, without waiting for the next HTTP tick.
+            if (ready || lostRealtime) void calibrate(baseline.current).catch(disconnected)
           })
           if (cancelled) { closeCloud(); return }
           await calibrate(true)
