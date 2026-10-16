@@ -12,10 +12,10 @@ function runningPhase(id, now) {
 
 test('only Terawang, discussion and Exchange are timed, with 90 seconds for each Terawang and discussion', () => {
   assert.deepEqual(GAME_PHASES.map(phase => [phase.id, phase.startMs / 60_000, phase.endMs / 60_000]), [
-    ['terawang-1', 0, 1.5], ['discussion-1', 1.5, 3], ['exchange-1', 3, 5],
-    ['terawang-2', 5, 6.5], ['discussion-2', 6.5, 8], ['gambler-movement', 8, 9],
-    ['exchange-2', 9, 11], ['terawang-final', 11, 12.5], ['discussion-final', 12.5, 14],
-    ['exchange-final', 14, 15],
+    ['terawang-1', 0, 1.5], ['discussion-1', 1.5, 3], ['exchange-1', 3, 6],
+    ['terawang-2', 6, 7.5], ['discussion-2', 7.5, 9], ['gambler-movement', 9, 10],
+    ['exchange-2', 10, 13], ['terawang-final', 13, 14.5], ['discussion-final', 14.5, 16],
+    ['exchange-final', 16, 19],
   ])
   for (const id of ['explanation', 'room-setup', 'buffer', 'finish']) assert.equal(indexOf(id), -1)
   for (const timerId of ['terawang', 'discussion']) {
@@ -25,7 +25,7 @@ test('only Terawang, discussion and Exchange are timed, with 90 seconds for each
   }
   assert.equal(GAME_PHASES.filter(phase => phase.timerId === 'movement').length, 4)
   assert.equal(GAME_PHASES.at(-1).id, 'exchange-final')
-  assert.equal(GAME_PHASES.at(-1).endMs, 900_000)
+  assert.equal(GAME_PHASES.at(-1).endMs, 1_140_000)
 })
 
 test('new games start at Terawang and every phase loads its own paused clock', () => {
@@ -33,7 +33,7 @@ test('new games start at Terawang and every phase loads its own paused clock', (
   assert.equal(initial.phaseIndex, indexOf('terawang-1'))
   assert.equal(initial.bank.timers.discussion.durationMs, 90_000)
   assert.equal(initial.bank.timers.terawang.durationMs, 90_000)
-  assert.equal(initial.bank.timers.movement.durationMs, 120_000)
+  assert.equal(initial.bank.timers.movement.durationMs, 180_000)
   for (const phase of GAME_PHASES) {
     const state = selectRundownPhase(indexOf(phase.id))
     assert.equal(Object.keys(state.bank.timers).length, 3)
@@ -55,8 +55,8 @@ test('manual expiry waits for GM, then Terawang leads to a separate discussion t
   const gambler = selectRundownPhase(indexOf('gambler-movement'))
   const customized = { ...gambler, bank: setTimerDuration(gambler.bank, 'movement', 45_000) }
   assert.equal(restoreRundown(JSON.stringify(customized), 130_000).bank.timers.movement.durationMs, 45_000)
-  assert.equal(selectRundownPhase(indexOf('exchange-2')).bank.timers.movement.durationMs, 120_000)
-  assert.equal(selectRundownPhase(indexOf('exchange-final')).bank.timers.movement.durationMs, 60_000)
+  assert.equal(selectRundownPhase(indexOf('exchange-2')).bank.timers.movement.durationMs, 180_000)
+  assert.equal(selectRundownPhase(indexOf('exchange-final')).bank.timers.movement.durationMs, 180_000)
 })
 
 test('category navigation includes three discussion phases and ends at the last Exchange', () => {
@@ -74,24 +74,24 @@ test('refresh preserves the selected Exchange and its absolute deadline while Ho
   const state = runningPhase('exchange-2', 1_000)
   const restored = restoreRundown(JSON.stringify(state), 31_000, false)
   assert.equal(restored.phaseIndex, indexOf('exchange-2'))
-  assert.equal(remainingTime(restored.bank.timers.movement, 31_000), 90_000)
+  assert.equal(remainingTime(restored.bank.timers.movement, 31_000), 150_000)
   const paused = { ...restored, bank: pauseAllTimers(restored.bank, 41_000) }
   assert.deepEqual(restoreRundown(JSON.stringify(paused), 900_000), paused)
   assert.equal(restoreRundown(JSON.stringify(state), 900_000, false).phaseIndex, state.phaseIndex)
 })
 
-test('optional auto-advance respects the 15 minutes of active play and never starts a closing timer', () => {
+test('optional auto-advance respects the 19 minutes of active play and never starts a closing timer', () => {
   const state = runningPhase('terawang-1', 1_000)
   const boundary = settleRundown(state, 91_000, true)
   assert.equal(boundary.phaseIndex, indexOf('discussion-1'))
   assert.equal(boundary.bank.timers.discussion.deadline, 181_000)
-  const late = settleRundown(state, 421_000, true)
+  const late = settleRundown(state, 481_000, true)
   assert.equal(late.phaseIndex, indexOf('discussion-2'))
-  assert.equal(remainingTime(late.bank.timers.discussion, 421_000), 60_000)
-  assert.deepEqual(restoreRundown(JSON.stringify(state), 421_000, true), late)
-  const gambler = settleRundown(state, 481_000, true)
+  assert.equal(remainingTime(late.bank.timers.discussion, 481_000), 60_000)
+  assert.deepEqual(restoreRundown(JSON.stringify(state), 481_000, true), late)
+  const gambler = settleRundown(state, 541_000, true)
   assert.equal(gambler.phaseIndex, indexOf('gambler-movement'))
-  assert.equal(gambler.bank.timers.movement.deadline, 541_000)
+  assert.equal(gambler.bank.timers.movement.deadline, 601_000)
   const finished = settleRundown(state, 2_000_000, true)
   assert.equal(finished.phaseIndex, indexOf('exchange-final'))
   assert.equal(finished.bank.timers.movement.remainingMs, 0)
@@ -161,7 +161,7 @@ test('pending roulette survives reload but cannot attach to a discussion or Exch
   const invalid = { ...createRundown(indexOf('discussion-2')), startAfterDraw: true }
   assert.deepEqual(restoreRundown(JSON.stringify(invalid), 3_000), createRundown(indexOf('discussion-2')))
   const immediate = startRundownPhase(createRundown(indexOf('exchange-1')), 1_000)
-  assert.equal(immediate.bank.timers.movement.deadline, 121_000)
+  assert.equal(immediate.bank.timers.movement.deadline, 181_000)
   assert.equal(immediate.startAfterDraw, undefined)
 })
 

@@ -66,7 +66,7 @@ test('only the three Terawang preparation phases trigger draws, never discussion
   }
 })
 
-test('the first target stays locked through discussion and the two-minute Exchange', () => {
+test('the first target stays locked through discussion and the three-minute Exchange', () => {
   let session = emptySession(), calls = 0, initialTargets
   for (const id of ['terawang-1', 'discussion-1', 'exchange-1', 'discussion-1']) {
     const round = exchangeDrawRound(phaseIndex(id))

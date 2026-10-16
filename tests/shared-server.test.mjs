@@ -144,7 +144,7 @@ test('paused state survives a server restart without losing duration or remainin
   const selected = await f.command({ type: 'phase', index: 2, start: true }, 0)
   f.setNow(1_030_400)
   const paused = await f.command({ type: 'pause' }, selected.body.state.revision)
-  assert.equal(paused.body.state.rundown.bank.timers.movement.remainingMs, 90_000)
+  assert.equal(paused.body.state.rundown.bank.timers.movement.remainingMs, 150_000)
   await f.stop()
   f.setNow(2_000_000)
   await f.start()

@@ -125,7 +125,7 @@ const GAME_CONFIG = {
   gameFlow: {
     phases: ['Terawang', 'Diskusi', 'Exchange'],
     highlightTimes: [2460, 3320, 4380],
-    repeatStart: 5340 / 9000, transitionDuration: .025, exchangeRange: '1–2 menit'
+    repeatStart: 5340 / 9000, transitionDuration: .025, exchangeRange: '3 menit'
   },
   exchangeScoring: {
     roleOrder: ['VIP', 'Pretender', 'Warden', 'Civilian'],

@@ -27,13 +27,13 @@ test('starting another phase pauses the old clock and preserves each remainder',
 
 test('expiry stops at zero without advancing or starting another clock; play rearms an expired timer', () => {
   const running = startTimer(createTimerBank(), 'movement', 1_000)
-  const expired = settleTimers(running, 150_000)
+  const expired = settleTimers(running, 190_000)
   assert.equal(expired.timers.movement.remainingMs, 0)
   assert.equal(expired.timers.movement.deadline, null)
   assert.equal(expired.timers.discussion.remainingMs, 90_000)
   assert.equal(expired.timers.terawang.remainingMs, 90_000)
   const restarted = startTimer(expired, 'movement', 200_000)
-  assert.equal(restarted.timers.movement.deadline, 320_000)
+  assert.equal(restarted.timers.movement.deadline, 380_000)
 })
 
 test('reset affects only the chosen timer and retains its configured duration', () => {
@@ -58,7 +58,7 @@ test('reload restores running and paused clocks accurately, including after thei
 
 test('invalid durations and corrupted storage cannot break clocks or exceed the movement limit', () => {
   const original = createTimerBank()
-  for (const duration of [-1, 0, 999, 120_001, Infinity, NaN]) {
+  for (const duration of [-1, 0, 999, 180_001, Infinity, NaN]) {
     assert.throws(() => setTimerDuration(original, 'movement', duration))
   }
   for (const raw of [null, '', '{broken', 'null', '[]', '{"version":99}', '{"version":1,"phaseIndex":9}']) {
@@ -75,9 +75,9 @@ test('invalid durations and corrupted storage cannot break clocks or exceed the 
   assert.equal(Object.values(restoreTimerBank(JSON.stringify(twoRunning), 1_000).timers).filter((timer) => timer.deadline !== null).length, 1)
 })
 
-test('movement accepts the new one- and two-minute phases instead of the old 30-second cap', () => {
+test('movement accepts durations up to three minutes and preserves them on reload', () => {
   const original = createTimerBank()
-  for (const duration of [30_001, 60_000, 120_000]) {
+  for (const duration of [30_001, 60_000, 120_000, 180_000]) {
     const configured = setTimerDuration(original, 'movement', duration)
     assert.equal(configured.timers.movement.remainingMs, duration)
     assert.deepEqual(restoreTimerBank(JSON.stringify(configured), 1_000), configured)

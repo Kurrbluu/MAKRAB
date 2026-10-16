@@ -25,17 +25,17 @@ test('multiple full turns accumulate minutes without losing small movements', ()
 })
 
 test('the Exchange maximum and one-second minimum allow immediate reversal', () => {
-  const maxed = moveDialCursor(createDialCursor(120_000, 0, 120_000), Math.PI / 2, 120_000)
-  assert.equal(maxed.valueMs, 120_000)
-  assert.equal(moveDialCursor(maxed, 0, 120_000).valueMs, 105_000)
-  const minimum = moveDialCursor(createDialCursor(1000, 0, 120_000), -Math.PI / 2, 120_000)
+  const maxed = moveDialCursor(createDialCursor(180_000, 0, 180_000), Math.PI / 2, 180_000)
+  assert.equal(maxed.valueMs, 180_000)
+  assert.equal(moveDialCursor(maxed, 0, 180_000).valueMs, 165_000)
+  const minimum = moveDialCursor(createDialCursor(1000, 0, 180_000), -Math.PI / 2, 180_000)
   assert.equal(minimum.valueMs, 1000)
-  assert.equal(moveDialCursor(minimum, 0, 120_000).valueMs, 16_000)
+  assert.equal(moveDialCursor(minimum, 0, 180_000).valueMs, 16_000)
 })
 
 test('an expired clock can be adjusted and fractional remaining time matches its display', () => {
-  assert.equal(moveDialCursor(createDialCursor(0, 0, 120_000), Math.PI / 2, 120_000).valueMs, 16_000)
-  assert.equal(createDialCursor(89_125, 0, 120_000).valueMs, 90_000)
+  assert.equal(moveDialCursor(createDialCursor(0, 0, 180_000), Math.PI / 2, 180_000).valueMs, 16_000)
+  assert.equal(createDialCursor(89_125, 0, 180_000).valueMs, 90_000)
 })
 
 test('pointer geometry follows a clock face regardless of its screen position', () => {

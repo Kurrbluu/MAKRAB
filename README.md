@@ -70,7 +70,7 @@ Layar permainan menampilkan **satu countdown untuk fase yang sedang dipilih**, d
 
 Saat target faction tampil pada layar lebar, countdown berada di panel tengah dengan angka terang, ring, dan bingkai berwarna lembut sesuai fase. Dua pasangan faction tampil di sebelah kiri dan dua pasangan di sebelah kanan, dengan tepi atas dan bawah yang sejajar dengan panel timer. Semua panel berada di dalam bingkai luar dengan jarak aman. Tampilan memakai permukaan matte dan aksen warna tanpa glow neon. Logo dan nama target berukuran besar agar mudah dilihat peserta; faction pemilih dan arah target tercantum pada tiap pasangan. Selama undian, panel tengah menampilkan roulette berukir dengan empat emblem faction dan nomor Exchange. Empat guliran kartu memakai kecepatan yang sama dan membuka target tersimpan berurutan dengan selisih 0,18 detik. Semua hasil ditahan dua detik sebelum countdown muncul. Pada layar yang lebih sempit, panel tengah berada di atas papan target; HP memakai dua kolom. Saat fase tidak memakai target, hanya countdown fase saat ini yang tampil. Seluruh tampilan tetap satu layar tanpa scroll.
 
-Timer mencakup **15 menit permainan aktif**, di luar roulette dan kegiatan pembuka atau penutup.
+Timer mencakup **19 menit permainan aktif**, di luar roulette dan kegiatan pembuka atau penutup.
 
 Dial countdown memakai ukiran garis, penanda arah, serta simbol mata untuk Terawang, percakapan untuk Diskusi, dan dua arah perpindahan untuk Exchange. Panel memiliki ornamen sudut dan garis hias; latar menambahkan siluet pegunungan serta lengkungan celestial yang samar. Dekorasi statis, warna fase tetap lembut, dan logo faction asli dipertahankan. Dalam 15 detik terakhir, garis bingkai dan ring diperjelas tanpa berkedip. Detail dial disederhanakan pada panel horizontal layar kecil supaya angka tetap terbaca.
 
@@ -78,20 +78,20 @@ Dial countdown memakai ukiran garis, penanda arah, serta simbol mata untuk Teraw
 | --- | --- | --- |
 | 00:00–01:30 | Terawang 1 | 01:30 |
 | 01:30–03:00 | Diskusi 1 | 01:30 |
-| 03:00–05:00 | Exchange 1 | 02:00 |
-| 05:00–06:30 | Terawang 2 | 01:30 |
-| 06:30–08:00 | Diskusi 2 | 01:30 |
-| 08:00–09:00 | Exchange 2 · Gambler | 01:00 |
-| 09:00–11:00 | Exchange 2 · pemain lainnya | 02:00 |
-| 11:00–12:30 | Terawang 3 | 01:30 |
-| 12:30–14:00 | Diskusi 3 | 01:30 |
-| 14:00–15:00 | Exchange 3 | 01:00 |
+| 03:00–06:00 | Exchange 1 | 03:00 |
+| 06:00–07:30 | Terawang 2 | 01:30 |
+| 07:30–09:00 | Diskusi 2 | 01:30 |
+| 09:00–10:00 | Exchange 2 · Gambler | 01:00 |
+| 10:00–13:00 | Exchange 2 · pemain lainnya | 03:00 |
+| 13:00–14:30 | Terawang 3 | 01:30 |
+| 14:30–16:00 | Diskusi 3 | 01:30 |
+| 16:00–19:00 | Exchange 3 | 03:00 |
 
 **Mulai Permainan** mengacak target ronde pertama, menahan hasil terakhir selama **2 detik**, lalu otomatis menjalankan **Terawang 1 (01:30)** tanpa menekan Play. Permainan baru mengikuti alur yang sama; hasil pertama yang sudah tersimpan dipakai kembali saat timer belum pernah dimulai. Pemilih fase menampilkan nama kegiatan tanpa rentang waktu. Panel timer menampilkan nama fase dan countdown tanpa keterangan “Fase X dari 10”. Penyimpanan rundown lama tidak dapat mengembalikan fase briefing, persiapan, buffer, atau durasi lama. Setelah Exchange terakhir habis, GM mengumumkan pemenang tanpa timer penutup.
 
 Saat countdown habis, GM menekan **›** untuk memulai fase berikutnya. Jika pencatatan aktif, Exchange menampilkan ranking otomatis setelah catatan lengkap; **Lanjut** membuka fase berikutnya atau layar selesai setelah ranking terakhir. Tanpa pencatatan, Exchange 3 langsung membuka **Permainan selesai**. Layar akhir memakai empat kotak faction glass dan pesan kecil **Hasil akhir segera diumumkan.** Selesai tersimpan setelah refresh; **Permainan baru** membuka konfirmasi reset. Shortcut Space dan R tidak memulai ulang timer dari layar selesai. Tampilan berada di `src/components/GameEndScreen.tsx` dan `game-end-screen.css`.
 
-Pada fase undian, countdown baru dimulai setelah roulette selesai; fase lain dimulai langsung. Tombol **‹** dan pemilih fase menyiapkan fase tujuan dalam keadaan jeda, termasuk setelah undian selesai. Setiap perpindahan fase mengambil durasinya sendiri: perpindahan Gambler dan perpindahan terakhir memakai 01:00, sedangkan dua perpindahan lainnya memakai 02:00. Tombol play, reset, dan edit hanya mengendalikan timer untuk fase yang terlihat.
+Pada fase undian, countdown baru dimulai setelah roulette selesai; fase lain dimulai langsung. Tombol **‹** dan pemilih fase menyiapkan fase tujuan dalam keadaan jeda, termasuk setelah undian selesai. Setiap perpindahan fase mengambil durasinya sendiri: Exchange 1, 2, dan 3 memakai 03:00, sedangkan perpindahan khusus Gambler memakai 01:00. Tombol play, reset, dan edit hanya mengendalikan timer untuk fase yang terlihat.
 
 Tombol ikon timer: **▶ / pause**, **reset**, dan **pensil** untuk mengubah menit/detik. Ring terluar juga dapat di-drag: searah jarum jam menambah waktu, berlawanan mengurangi; satu putaran = satu menit. Drag menjeda timer lalu menyimpan saat dilepas; tekan Play untuk melanjutkan. Ring mengikuti sisa waktu terhadap durasi timer. Durasi dibatasi konfigurasi fase. Input dari keadaan lama ditolak jika perangkat lain sudah mengubah timer.
 

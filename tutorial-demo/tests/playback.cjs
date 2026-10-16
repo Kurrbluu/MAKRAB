@@ -499,7 +499,7 @@ assert(endingPoints.includes('Azure Dragon mendapat +3 poin dari satu VIP.'));
 assert(!endingPoints.includes('data-winner-faction'),'The tutorial does not invent actual faction scores or a winner');
 api.pause();raf(2000);assert.equal(markup(),endingPoints);
 assert.equal(api.config.totalExchanges,3);
-seekScene('loop',7000);assert(markup().includes('1–2 menit'));assert(!markup().includes('30 detik'));
+seekScene('loop',7000);assert(markup().includes('3 menit'));assert(!markup().includes('30 detik'));
 seekScene('end',1000);assert(markup().includes('closing-scene'));assert(markup().includes('<h1>Siap bermain?</h1>'));
 assert.equal(api.scenes.at(-1).duration,9700);
 for(const pairing of [api.config.exchangePairing,...api.config.rollExamples]){
