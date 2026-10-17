@@ -7,6 +7,50 @@ import { createGameHost } from '../server/host.mjs'
 import { scoringHost } from './helpers/scoring-host.mjs'
 
 const command = (factionId, role, room = 'a', round = 1, expectedEntryRevision = null) => ({ type: 'scoreSet', factionId, role, room, round, expectedEntryRevision })
+
+test('optional LAN rounds synchronize both rooms, unlock only active score sets, and survive host restart', { timeout: 15_000 }, async t => {
+  const f = await scoringHost(t), logged = await f.login('GM Extra')
+  await f.gm(logged.cookie, { type: 'scoresEnable', enabled: true })
+  assert.equal((await f.gm(logged.cookie, command(FACTION_IDS[0], 'vip', 'a', 4))).status, 400)
+  for (const round of [1, 2, 3]) await fill(f, logged.cookie, round)
+  const third = await expire(f, 9, 1_100_000)
+  assert.equal(third.state.results.presentation.round, 3)
+  const roomA = await f.events(), roomB = await f.events()
+  await roomA.next(); await roomB.next()
+  const fourth = await f.core({ type: 'addRound' })
+  assert.equal(fourth.status, 200)
+  assert.equal(fourth.body.state.rundown.roundCount, 4)
+  assert.deepEqual((await roomA.next(fourth.body.state.revision)).state, (await roomB.next(fourth.body.state.revision)).state)
+  roomA.close(); roomB.close()
+  const beforeRestart = fourth.body.state
+  await f.stop(); await f.start()
+  const restored = (await f.publicState()).state
+  assert.deepEqual(restored, beforeRestart)
+  const gm = await f.login('GM Restored')
+  assert.equal(gm.body.roundCount, 4)
+  await fill(f, gm.cookie, 4)
+  const fourthDone = await expire(f, 12, 1_200_000)
+  assert.equal(fourthDone.state.results.presentation.round, 4)
+  assertPublicOnly(fourthDone)
+  const done = await f.core({ type: 'resultsNext' })
+  assert.equal(done.body.state.results.presentation, null)
+  assert.equal(done.body.state.rundown.phaseIndex, 12)
+  const fifth = await f.core({ type: 'addRound' })
+  assert.equal(fifth.body.state.rundown.roundCount, 5)
+  await fill(f, gm.cookie, 5)
+  const fifthDone = await expire(f, 15, 1_300_000)
+  assert.equal(fifthDone.state.results.presentation.round, 5)
+  assert.equal((await f.core({ type: 'addRound' })).status, 400)
+  const saved = (await f.request('/api/gm/session', { cookie: gm.cookie })).body
+  const edited = saved.scoring.entries.find(entry => entry.round === 5 && entry.room === 'a' && entry.factionId === FACTION_IDS[0])
+  const correction = await f.gm(gm.cookie, { ...command(FACTION_IDS[0], 'pretender', 'a', 5, edited.revision) })
+  assert.equal(correction.status, 200)
+  const cleared = await f.gm(gm.cookie, { type: 'scoresClear', expectedRevision: correction.body.scoring.revision })
+  assert.equal(cleared.status, 200)
+  assert.equal(cleared.body.roundCount, 5)
+  assert.equal(cleared.body.scoring.entries.length, 0)
+  assert.equal((await f.publicState()).state.rundown.roundCount, 5)
+})
 function assertPublicOnly(value) {
   const forbidden = new Set(['scoring', 'entries', 'history', 'totals', 'points', 'role', 'actor', 'gmPin', 'pinHint', 'pin'])
   const visit = object => {

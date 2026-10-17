@@ -4,7 +4,9 @@ import { factions, gameName } from '../data/game'
 import FactionEmblem from './FactionEmblem'
 import './game-end-screen.css'
 
-export default function GameEndScreen({ onNewGame, onHome, disabled }: { onNewGame: () => void; onHome?: () => void; disabled?: boolean }) {
+export default function GameEndScreen({ onNewGame, onHome, disabled }: {
+  onNewGame: () => void; onHome?: () => void; disabled?: boolean
+}) {
   const titleRef = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
     if (!document.querySelector('dialog[open]')) titleRef.current?.focus({ preventScroll: true })

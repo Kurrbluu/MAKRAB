@@ -2,6 +2,9 @@ import type { TimerId } from './timers'
 
 export const exchangeNumbers = [1, 2, 3, 4, 5] as const
 export type ExchangeNumber = typeof exchangeNumbers[number]
+export type RoundCount = 3 | 4 | 5
+export const DEFAULT_ROUND_COUNT: RoundCount = 3
+export const MAX_ROUND_COUNT: RoundCount = 5
 
 type PhaseDefinition = {
   id: string
@@ -25,6 +28,12 @@ const phaseDefinitions: PhaseDefinition[] = [
   { id: 'terawang-final', title: 'Terawang 3', timerId: 'terawang', durationMs: 90_000, round: 3, drawTargets: true },
   { id: 'discussion-final', title: 'Diskusi 3', timerId: 'discussion', durationMs: 90_000, round: 3 },
   { id: 'exchange-final', title: 'Exchange 3', timerId: 'movement', durationMs: 180_000, round: 3 },
+  { id: 'terawang-4', title: 'Terawang 4', timerId: 'terawang', durationMs: 90_000, round: 4, drawTargets: true },
+  { id: 'discussion-4', title: 'Diskusi 4', timerId: 'discussion', durationMs: 90_000, round: 4 },
+  { id: 'exchange-4', title: 'Exchange 4', timerId: 'movement', durationMs: 180_000, round: 4 },
+  { id: 'terawang-5', title: 'Terawang 5', timerId: 'terawang', durationMs: 90_000, round: 5, drawTargets: true },
+  { id: 'discussion-5', title: 'Diskusi 5', timerId: 'discussion', durationMs: 90_000, round: 5 },
+  { id: 'exchange-5', title: 'Exchange 5', timerId: 'movement', durationMs: 180_000, round: 5 },
 ]
 
 export type GamePhase = PhaseDefinition & { startMs: number; endMs: number }

@@ -1,4 +1,4 @@
-import { GAME_PHASES } from './gamePhases'
+import { DEFAULT_ROUND_COUNT, GAME_PHASES } from './gamePhases'
 
 export type Faction = {
   id: string
@@ -29,7 +29,7 @@ export const preparationSteps = [
   { id: 'briefing', label: 'Briefing aturan sudah selesai.', detail: 'Termasuk Terawang, pilihan Leader, dan Exchange serentak.' },
 ]
 
-export const gameFlow = GAME_PHASES.map(phase => [
+export const gameFlow = GAME_PHASES.filter(phase => (phase.round ?? 0) <= DEFAULT_ROUND_COUNT).map(phase => [
   phase.title,
   `Menit ${phase.startMs / 60_000}–${phase.endMs / 60_000}. Durasi ${phase.durationMs / 60_000} menit.`,
 ] as const)

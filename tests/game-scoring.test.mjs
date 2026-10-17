@@ -92,7 +92,7 @@ test('automatic input rejects duplicate slots, stale groups, and drafts from bef
   const fresh = applyScoringCommand(cleared, { ...input, expectedClearRevision: cleared.lastCleared.revision }, 'GM', 1_003_000, id)
   assert.equal(fresh.entries.length, 1)
   for (const role of ['gambler', 'leader', ['vip']]) assert.equal(isScoringCommand({ ...input, role }), false)
-  for (const expectedRound of [undefined, 0, 4, '1']) assert.equal(isScoringCommand({ ...input, expectedRound }), false)
+  for (const expectedRound of [undefined, 0, 6, '1']) assert.equal(isScoringCommand({ ...input, expectedRound }), false)
 })
 
 test('rankings are cumulative, omit points, and preserve tied ranks without an invented tie breaker', () => {

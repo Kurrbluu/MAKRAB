@@ -5,7 +5,7 @@ import { TIMER_CONFIG } from '../data/timers.ts'
 import type { TimerId } from '../data/timers'
 import { ensureExchangeTargets } from './exchangeFlow.ts'
 import { EXCHANGE_PRESENTATION } from './exchangePresentation.ts'
-import { completeRundownDraw, createRundown, prepareRundownDraw, selectRundownPhase, settleRundown, startRundownPhase } from './gameRundown.ts'
+import { addRundownRound, completeRundownDraw, createRundown, phaseCountFor, prepareRundownDraw, queueRundownRound, roundCountFor, selectRundownPhase, settleRundown, startRundownPhase } from './gameRundown.ts'
 import type { GameRundown } from './gameRundown'
 import { pauseAllTimers, pauseTimer, resetTimer, setTimerDuration, startTimer } from './gameTimer.ts'
 import { emptySession, isValidTargets } from './randomizer.ts'
@@ -37,7 +37,7 @@ export type SharedGame = {
 }
 export type SharedSnapshot = { state: SharedGame; serverNow: number; serverReceivedAt?: number }
 export type SharedCommand =
-  | { type: 'begin' | 'toggle' | 'pause' | 'reset' | 'replay' | 'home' | 'newGame' | 'resultsNext' }
+  | { type: 'begin' | 'toggle' | 'pause' | 'reset' | 'replay' | 'home' | 'newGame' | 'resultsNext' | 'addRound' | 'queueRound' }
   | { type: 'phase'; index: number; start: boolean }
   | { type: 'duration'; durationMs: number }
 type Choices = { id: () => string; chooseIndex?: (length: number) => number }
@@ -110,9 +110,9 @@ export function applySharedCommand(state: SharedGame, command: SharedCommand, no
       break
     }
     case 'phase': {
-      if (!Number.isInteger(command.index) || command.index < 0 || command.index >= GAME_PHASES.length) throw new Error('Fase tidak valid.')
+      if (!Number.isInteger(command.index) || command.index < 0 || command.index >= phaseCountFor(state.rundown)) throw new Error('Fase tidak valid.')
       next = cancelPendingCue(state, now)
-      const selected = selectRundownPhase(command.index)
+      const selected = selectRundownPhase(command.index, roundCountFor(state.rundown))
       next = { ...next, active: true, presentation: null, rundown: command.start ? startRundownPhase(selected, now + SHARED_START_LEAD_MS) : selected }
       const targetPhase = GAME_PHASES[command.index]
       if (targetPhase.drawTargets) next = prepareDraw(next, now, choices)
@@ -121,6 +121,15 @@ export function applySharedCommand(state: SharedGame, command: SharedCommand, no
       }
       break
     }
+    case 'addRound': {
+      if (state.results?.presentation?.kind === 'waiting') throw new Error('Tunggu catatan kedua ruangan lengkap sebelum menambah ronde.')
+      const selected = addRundownRound(state.rundown)
+      next = prepareDraw({ ...cancelPendingCue(state, now), rundown: startRundownPhase(selected, now), presentation: null }, now, choices)
+      break
+    }
+    case 'queueRound':
+      next = { ...state, rundown: queueRundownRound(state.rundown) }
+      break
     case 'replay':
       if (state.presentation) return state
       next = prepareDraw(state, now, choices)
@@ -162,7 +171,7 @@ export function applySharedCommand(state: SharedGame, command: SharedCommand, no
 
 export function isSharedCommand(value: unknown): value is SharedCommand {
   if (!value || typeof value !== 'object' || !('type' in value)) return false
-  if (['begin', 'toggle', 'pause', 'reset', 'replay', 'home', 'newGame', 'resultsNext'].includes(String(value.type))) return true
+  if (['begin', 'toggle', 'pause', 'reset', 'replay', 'home', 'newGame', 'resultsNext', 'addRound', 'queueRound'].includes(String(value.type))) return true
   if (value.type === 'phase') return 'index' in value && Number.isInteger(value.index) && 'start' in value && typeof value.start === 'boolean'
   return value.type === 'duration' && 'durationMs' in value && Number.isInteger(value.durationMs)
 }
@@ -173,9 +182,12 @@ export function assertSharedGame(value: unknown): asserts value is SharedGame {
   if (state.results !== undefined) assertPublicResults(state.results)
   if (state.version !== 1 || typeof state.gameId !== 'string' || !state.gameId || !Number.isInteger(state.revision) || state.revision < 0
     || typeof state.active !== 'boolean' || !Number.isFinite(state.updatedAt) || state.rundown?.version !== 4
+    || (state.rundown.roundCount !== undefined && ![3, 4, 5].includes(state.rundown.roundCount))
     || !Number.isInteger(state.rundown.phaseIndex) || !GAME_PHASES[state.rundown.phaseIndex] || state.rundown.bank?.version !== 1
+    || state.rundown.phaseIndex >= phaseCountFor(state.rundown)
     || !state.rundown.bank.timers || state.cueTracker?.phaseIndex !== state.rundown.phaseIndex || typeof state.cueTracker.started !== 'boolean'
     || (state.rundown.startAfterDraw !== undefined && state.rundown.startAfterDraw !== true)) throw new Error('Sesi tidak valid.')
+  if (state.results?.presentation && state.results.presentation.round > roundCountFor(state.rundown)) throw new Error('Ranking ronde ini belum diaktifkan.')
   for (const config of TIMER_CONFIG) {
     const timer = state.rundown.bank.timers[config.id]
     if (!timer || !Number.isInteger(timer.durationMs) || timer.durationMs < 1000 || timer.durationMs > config.maxDurationMs
@@ -183,9 +195,11 @@ export function assertSharedGame(value: unknown): asserts value is SharedGame {
       || (timer.deadline !== null && (!Number.isFinite(timer.deadline) || timer.deadline <= 0))
       || (config.id !== GAME_PHASES[state.rundown.phaseIndex].timerId && timer.deadline !== null)) throw new Error('Clock sesi tidak valid.')
   }
-  if (state.draws?.version !== 1 || ![1, 2, 3, 4, 5].includes(state.draws.activeRound) || !state.draws.rounds) throw new Error('Undian sesi tidak valid.')
+  if (state.draws?.version !== 1 || ![1, 2, 3, 4, 5].includes(state.draws.activeRound)
+    || state.draws.activeRound > roundCountFor(state.rundown) || !state.draws.rounds) throw new Error('Undian sesi tidak valid.')
   for (const [round, result] of Object.entries(state.draws.rounds)) {
-    if (!['1', '2', '3'].includes(round) || !result || result.confirmed !== true || !isValidTargets(FACTION_IDS, result.targets)) throw new Error('Target sesi tidak valid.')
+    if (!['1', '2', '3', '4', '5'].includes(round) || Number(round) > roundCountFor(state.rundown)
+      || !result || result.confirmed !== true || !isValidTargets(FACTION_IDS, result.targets)) throw new Error('Target sesi tidak valid.')
   }
   if (state.presentation !== null) {
     const p = state.presentation

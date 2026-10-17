@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, FormEvent } from 'react'
 import { factions } from './data/game'
-import { GAME_PHASES } from './data/gamePhases'
+import { exchangeNumbers, GAME_PHASES } from './data/gamePhases'
+import type { RoundCount } from './data/gamePhases'
 import FactionEmblem from './components/FactionEmblem'
 import { useSharedSession } from './hooks/SharedSession'
 import { ROLE_POINTS, SCORE_ROLES, nextScoreRound, roundProgress, scoreKey } from './lib/gameScoring'
 import type { ScoringState, ScoringCommand, ScoreEntry, ScoreRole, ScoreRoom, ScoreRound } from './lib/gameScoring'
+import { canAddRundownRound, canQueueRundownRound, roundCountFor } from './lib/gameRundown'
 import './gm-screen.css'
 
-type GMData = { scoring: ScoringState; totals: Record<string, number>; actor: string; serverNow: number; error?: string }
+type GMData = { scoring: ScoringState; totals: Record<string, number>; roundCount?: RoundCount; actor: string; serverNow: number; error?: string }
 type ClearDraft = { gameId: string; revision: number }
 type EntryDraft = { kind: 'add' | 'edit'; round: ScoreRound; room: ScoreRoom; factionId: string }
 const signed = (value: number) => `${value > 0 ? '+' : ''}${value}`
@@ -31,8 +33,9 @@ export default function GameMasterScreen() {
   const [message, setMessage] = useState('')
   const [room, setRoom] = useState<ScoreRoom>(() => preference('makrab:gm-room', 'a') === 'b' ? 'b' : 'a')
   const [draft, setDraft] = useState<EntryDraft | null>(null)
-  const nextRound = data ? nextScoreRound(data.scoring) : 1
-  const round = draft?.round ?? nextRound ?? 3
+  const roundCount = shared?.snapshot ? roundCountFor(shared.snapshot.state.rundown) : data?.roundCount ?? 3
+  const nextRound = data ? nextScoreRound(data.scoring, roundCount) : 1
+  const round = draft?.round ?? nextRound ?? roundCount
   const entryRoom = draft?.room ?? room
   const factionId = draft?.factionId ?? null
   const [role, setRole] = useState<ScoreRole | null>(null)
@@ -179,7 +182,10 @@ export default function GameMasterScreen() {
   }
   const gameHref = shared?.snapshot?.state.active ? '#/game' : '#/'
   const currentPhase = GAME_PHASES[shared?.snapshot?.state.rundown.phaseIndex ?? 0]
-  const progress = data ? roundProgress(data.scoring, nextRound ?? 3) : { a: 0, b: 0 }
+  const progress = data ? roundProgress(data.scoring, nextRound ?? roundCount) : { a: 0, b: 0 }
+  const canAddRound = Boolean(shared?.canControl && shared.snapshot && canAddRundownRound(shared.snapshot.state.rundown)
+    && shared.snapshot.state.results?.presentation?.kind !== 'waiting')
+  const canQueueRound = Boolean(shared?.canControl && shared.snapshot && canQueueRundownRound(shared.snapshot.state.rundown))
   const blockedAdd = draft?.kind === 'add' && (Boolean(entry) || nextRound !== draft.round)
   const hasRecords = Boolean(data && (data.scoring.entries.length || data.scoring.history.length))
 
@@ -199,20 +205,21 @@ export default function GameMasterScreen() {
         <div className="gm-intro"><div><p className="gm-eyebrow">{data.actor}</p><h1>Tambah poin</h1><p>Pilih faction, pilih role, lalu simpan. Catatan dikelompokkan otomatis per 8.</p></div><p>{currentPhase.title}<span className={`gm-connection${connected && shared.connection === 'connected' ? ' is-connected' : ''}`}>{connected && shared.connection === 'connected' ? 'Tersambung' : 'Menyambungkan…'}</span></p></div>
         <details className="gm-summary"><summary>Lihat total poin <span>Gabungan kedua ruangan</span></summary><section className="gm-totals" aria-label="Total poin gabungan">{factions.map(value => <article key={value.id} style={{ '--gm-faction-color': value.color } as CSSProperties}><FactionEmblem faction={value} /><div><span>{value.name}</span><strong>{signed(data.totals[value.id])}<small>poin</small></strong></div></article>)}</section></details>
         <section className={`gm-mode${data.scoring.enabled ? ' is-active' : ''}`}><div><h2>{data.scoring.enabled ? 'Pencatatan aktif' : 'Mulai mencatat hasil'}</h2><p>{data.scoring.enabled ? 'Ranking otomatis setelah Exchange dan hasil kedua ruangan lengkap.' : 'Aktifkan pencatatan untuk memakai poin dan ranking otomatis.'}</p></div><button className={data.scoring.enabled ? 'gm-secondary' : 'gm-primary'} disabled={unavailable} onClick={() => { void send({ type: 'scoresEnable', enabled: !data.scoring.enabled }) }}>{data.scoring.enabled ? 'Nonaktifkan' : 'Aktifkan'}</button></section>
+        {canQueueRound && <section className="gm-mode"><div><h2>Ronde tambahan</h2><p>{canAddRound ? 'Masih ada waktu? Mulai satu ronde tambahan dengan undian baru.' : 'Siapkan ronde berikutnya. Timer Exchange ini tetap berjalan.'}</p></div><button className="gm-primary" disabled={unavailable || shared?.busy} onClick={() => { void shared?.send({ type: canAddRound ? 'addRound' : 'queueRound' }) }}>Tambah Exchange {roundCount + 1}</button></section>}
         {message && <p className="gm-feedback" role="status">{message}</p>}
         <section className="gm-clear-bar"><div><h2>Clear catatan</h2><p>{hasRecords ? 'Kosongkan semua hasil Exchange dan poin.' : 'Belum ada catatan untuk dihapus.'}</p></div><button className="gm-clear-button" disabled={unavailable || !hasRecords} onClick={() => { setMessage(''); setClearDraft({ gameId: data.scoring.gameId, revision: data.scoring.revision }) }}>Clear semua catatan</button></section>
         {data.scoring.enabled && <section className="gm-workspace">
           <fieldset className="gm-room-select"><legend>Ruangan kamu</legend><div>{(['a', 'b'] as const).map(value => <button key={value} disabled={unavailable} aria-pressed={room === value} onClick={() => chooseRoom(value)}>Ruangan {value === 'a' ? '1' : '2'}</button>)}</div></fieldset>
           <header className="gm-picker-heading"><h2>Faction mana yang memilih pemain?</h2><p>Tap faction itu untuk mencatat role pemain yang dipilihnya.</p></header>
           <div className="gm-faction-grid">{factions.map(value => {
-            const saved = data.scoring.entries.find(item => item.key === scoreKey(nextRound ?? 3, room, value.id))
+            const saved = data.scoring.entries.find(item => item.key === scoreKey(nextRound ?? roundCount, room, value.id))
             return <button key={value.id} className={`gm-faction-card${saved ? ' is-recorded' : ''}`} data-faction={value.id} style={{ '--gm-faction-color': value.color } as CSSProperties} disabled={unavailable || !nextRound || Boolean(saved)} onClick={() => chooseFaction(value.id)}>
               <FactionEmblem faction={value} /><span className="gm-faction-content"><strong>{value.name}</strong><span>{saved ? `${roleLabel(saved.role)} · ${signed(ROLE_POINTS[saved.role])} poin` : 'Belum dicatat'}</span>{saved && <small>Oleh {saved.actor}</small>}</span><span className="gm-faction-action">{saved ? 'Tercatat ✓' : 'Tambah →'}</span>
             </button>
           })}</div>
-          <div className="gm-round-progress"><div><strong>{nextRound ? `${progress.a + progress.b}/8 catatan pada kelompok ini` : 'Semua 24 catatan lengkap ✓'}</strong><span>Ruangan 1: {progress.a}/4 · Ruangan 2: {progress.b}/4</span></div><p>{!nextRound ? 'Buka catatan tersimpan jika perlu koreksi.' : progress[room] === 4 ? `Ruangan ${room === 'a' ? '1' : '2'} sudah lengkap. Menunggu catatan ruangan lainnya.` : 'Setelah 8 catatan lengkap, kelompok berikutnya terbuka otomatis.'}</p></div>
+          <div className="gm-round-progress"><div><strong>{nextRound ? `${progress.a + progress.b}/8 catatan pada kelompok ini` : `Semua ${roundCount * 8} catatan lengkap ✓`}</strong><span>Ruangan 1: {progress.a}/4 · Ruangan 2: {progress.b}/4</span></div><p>{!nextRound ? 'Buka catatan tersimpan jika perlu koreksi.' : progress[room] === 4 ? `Ruangan ${room === 'a' ? '1' : '2'} sudah lengkap. Menunggu catatan ruangan lainnya.` : 'Setelah 8 catatan lengkap, kelompok berikutnya terbuka otomatis.'}</p></div>
         </section>}
-        <section className="gm-batches" aria-label="Catatan tersimpan per kelompok delapan"><header><h2>Catatan tersimpan</h2><p>Hijau = 8 catatan lengkap · Emas = sedang diisi.</p></header>{([1, 2, 3] as const).map(batch => {
+        <section className="gm-batches" aria-label="Catatan tersimpan per kelompok delapan"><header><h2>Catatan tersimpan</h2><p>Hijau = 8 catatan lengkap · Emas = sedang diisi.</p></header>{exchangeNumbers.filter(batch => batch <= roundCount).map(batch => {
           const counts = roundProgress(data.scoring, batch), count = counts.a + counts.b
           const complete = count === 8
           const state = complete ? 'complete' : count > 0 || nextRound === batch ? 'current' : 'empty'
@@ -243,7 +250,7 @@ export default function GameMasterScreen() {
       </div>}
     </dialog>
     <dialog ref={clearDialog} className="gm-dialog gm-dialog--clear" onCancel={event => { if (busyRef.current) event.preventDefault(); else setClearDraft(null) }} onClose={() => setClearDraft(null)} onClick={event => { if (event.target === event.currentTarget && !busyRef.current) setClearDraft(null) }} aria-labelledby="gm-clear-title">
-      {clearDraft && data && <div className="gm-dialog-card"><p className="gm-eyebrow">KOSONGKAN CATATAN</p><h2 id="gm-clear-title">Clear semua catatan?</h2><p>Semua hasil Exchange 1–3, poin kedua ruangan, dan riwayat input akan dikosongkan.</p><p className="gm-clear-keeps">Timer, fase, dan undian tetap berjalan.</p>{message && <p className="gm-feedback" role="status">{message}</p>}<footer className="gm-clear-actions"><button className="gm-secondary" disabled={busy} autoFocus onClick={() => setClearDraft(null)}>Batal</button><button className="gm-primary gm-danger" disabled={unavailable} onClick={() => { void send({ type: 'scoresClear', expectedRevision: clearDraft.revision }, clearDraft.gameId) }}>{busy ? 'Menghapus…' : 'Ya, clear semua'}</button></footer></div>}
+      {clearDraft && data && <div className="gm-dialog-card"><p className="gm-eyebrow">KOSONGKAN CATATAN</p><h2 id="gm-clear-title">Clear semua catatan?</h2><p>Semua hasil Exchange 1–{roundCount}, poin kedua ruangan, dan riwayat input akan dikosongkan.</p><p className="gm-clear-keeps">Timer, fase, dan undian tetap berjalan.</p>{message && <p className="gm-feedback" role="status">{message}</p>}<footer className="gm-clear-actions"><button className="gm-secondary" disabled={busy} autoFocus onClick={() => setClearDraft(null)}>Batal</button><button className="gm-primary gm-danger" disabled={unavailable} onClick={() => { void send({ type: 'scoresClear', expectedRevision: clearDraft.revision }, clearDraft.gameId) }}>{busy ? 'Menghapus…' : 'Ya, clear semua'}</button></footer></div>}
     </dialog>
   </main>
 }

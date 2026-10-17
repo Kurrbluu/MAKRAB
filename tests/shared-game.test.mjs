@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { FACTION_IDS } from '../src/data/factionIds.ts'
 import { GAME_PHASES } from '../src/data/gamePhases.ts'
+import { phaseCountFor } from '../src/lib/gameRundown.ts'
 import { remainingTime } from '../src/lib/gameTimer.ts'
 import { isValidTargets } from '../src/lib/randomizer.ts'
 import { createSharedGame, applySharedCommand, advanceSharedGame, assertSharedGame, isSharedCommand, SHARED_START_LEAD_MS, SHARED_DRAW_DURATION_MS } from '../src/lib/sharedGame.ts'
@@ -66,7 +67,7 @@ test('pause, resume and roulette replay preserve the remaining time and never re
 test('manual phase selection and forward start retain rundown durations and cached targets', () => {
   const g = game()
   let state = g.initial
-  for (const [index, phase] of GAME_PHASES.entries()) {
+  for (const [index, phase] of GAME_PHASES.slice(0, phaseCountFor(g.initial.rundown)).entries()) {
     state = g.command(state, { type: 'phase', index, start: false }, 1_000_000 + index * 200_000)
     assertSharedGame(state)
     const timer = state.rundown.bank.timers[phase.timerId]

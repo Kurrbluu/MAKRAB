@@ -31,6 +31,8 @@
 .results-factions .is-leading .faction-frame-corner { opacity: .45; }
 
 .exchange-results footer { display: grid; place-items: center; }
+.results-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.results-add-round { border-color: #d8b07a9c; }
 .results-continue { display: inline-flex; align-items: center; justify-content: center; gap: 22px; min-height: 44px; padding: 10px 26px; border: 1px solid #d8b07a60; border-radius: 8px; color: #e4d2b0; background: #21242fbb; font: inherit; font-size: 13px; cursor: pointer; transition: background 160ms ease, border-color 160ms ease; }
 .results-continue:hover:not(:disabled) { background: #2c2c36; border-color: #d8b07a; }
 .results-continue:focus-visible { outline: 2px solid #e4d2b0; outline-offset: 4px; }

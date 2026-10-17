@@ -2,16 +2,17 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { GAME_PHASES } from '../src/data/gamePhases.ts'
 import { pauseAllTimers, remainingTime, setTimerDuration, startTimer } from '../src/lib/gameTimer.ts'
-import { completeRundownDraw, createRundown, nextPhaseForTimer, prepareRundownDraw, restoreRundown, RUNDOWN_VERSION, rundownStorageKey, selectRundownPhase, settleRundown, startRundownPhase } from '../src/lib/gameRundown.ts'
+import { completeRundownDraw, createRundown, nextPhaseForTimer, phaseCountFor, prepareRundownDraw, restoreRundown, RUNDOWN_VERSION, rundownStorageKey, selectRundownPhase, settleRundown, startRundownPhase } from '../src/lib/gameRundown.ts'
 
 const indexOf = (id) => GAME_PHASES.findIndex((phase) => phase.id === id)
+const basePhases = GAME_PHASES.slice(0, phaseCountFor(createRundown()))
 function runningPhase(id, now) {
   const state = createRundown(indexOf(id))
   return { ...state, bank: startTimer(state.bank, GAME_PHASES[state.phaseIndex].timerId, now) }
 }
 
 test('only Terawang, discussion and Exchange are timed, with 90 seconds for each Terawang and discussion', () => {
-  assert.deepEqual(GAME_PHASES.map(phase => [phase.id, phase.startMs / 60_000, phase.endMs / 60_000]), [
+  assert.deepEqual(basePhases.map(phase => [phase.id, phase.startMs / 60_000, phase.endMs / 60_000]), [
     ['terawang-1', 0, 1.5], ['discussion-1', 1.5, 3], ['exchange-1', 3, 6],
     ['terawang-2', 6, 7.5], ['discussion-2', 7.5, 9], ['gambler-movement', 9, 10],
     ['exchange-2', 10, 13], ['terawang-final', 13, 14.5], ['discussion-final', 14.5, 16],
@@ -19,13 +20,13 @@ test('only Terawang, discussion and Exchange are timed, with 90 seconds for each
   ])
   for (const id of ['explanation', 'room-setup', 'buffer', 'finish']) assert.equal(indexOf(id), -1)
   for (const timerId of ['terawang', 'discussion']) {
-    const phases = GAME_PHASES.filter(phase => phase.timerId === timerId)
+    const phases = basePhases.filter(phase => phase.timerId === timerId)
     assert.equal(phases.length, 3)
     assert(phases.every(phase => phase.durationMs === 90_000))
   }
-  assert.equal(GAME_PHASES.filter(phase => phase.timerId === 'movement').length, 4)
-  assert.equal(GAME_PHASES.at(-1).id, 'exchange-final')
-  assert.equal(GAME_PHASES.at(-1).endMs, 1_140_000)
+  assert.equal(basePhases.filter(phase => phase.timerId === 'movement').length, 4)
+  assert.equal(basePhases.at(-1).id, 'exchange-final')
+  assert.equal(basePhases.at(-1).endMs, 1_140_000)
 })
 
 test('new games start at Terawang and every phase loads its own paused clock', () => {
@@ -34,7 +35,7 @@ test('new games start at Terawang and every phase loads its own paused clock', (
   assert.equal(initial.bank.timers.discussion.durationMs, 90_000)
   assert.equal(initial.bank.timers.terawang.durationMs, 90_000)
   assert.equal(initial.bank.timers.movement.durationMs, 180_000)
-  for (const phase of GAME_PHASES) {
+  for (const phase of basePhases) {
     const state = selectRundownPhase(indexOf(phase.id))
     assert.equal(Object.keys(state.bank.timers).length, 3)
     assert.equal(state.bank.timers[phase.timerId].durationMs, phase.durationMs)

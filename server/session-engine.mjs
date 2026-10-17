@@ -2,6 +2,7 @@ import { createHash, randomUUID, randomInt } from 'node:crypto'
 import { createSharedGame, advanceSharedGame, applySharedCommand, assertSharedGame, isSharedCommand } from '../src/lib/sharedGame.ts'
 import { createScoring, syncScoring, publicResults, scoreTotals, applyScoringCommand, assertScoring, isScoringCommand, ScoreConflict } from '../src/lib/gameScoring.ts'
 import { jsonEqual } from '../src/lib/jsonEqual.ts'
+import { roundCountFor } from '../src/lib/gameRundown.ts'
 
 export function createSessionDocument(now, id = randomUUID) {
   const state = createSharedGame(now, id)
@@ -19,7 +20,7 @@ export function assertSessionDocument(document) {
     }
   }
   checkPublic(document.state)
-  assertScoring(document.scoring)
+  assertScoring(document.scoring, roundCountFor(document.state.rundown))
   if (document.scoring.gameId !== document.state.gameId || !Array.isArray(document.commands) || document.commands.length > 128
     || document.commands.some(entry => typeof entry.id !== 'string' || typeof entry.hash !== 'string')) throw new Error('Sesi tersimpan tidak valid.')
 }
@@ -37,7 +38,7 @@ export function advanceSession(document, now, id = randomUUID) {
   return reconcileSession(state === document.state ? document : { ...document, state }, document)
 }
 export function publicSnapshot(document, now) { return { state: document.state, serverNow: now } }
-export function privateSnapshot(document, actor, now) { return { scoring: document.scoring, totals: scoreTotals(document.scoring), actor, serverNow: now } }
+export function privateSnapshot(document, actor, now) { return { scoring: document.scoring, totals: scoreTotals(document.scoring), roundCount: roundCountFor(document.state.rundown), actor, serverNow: now } }
 const validId = id => typeof id === 'string' && /^[a-zA-Z0-9:_-]{1,160}$/.test(id)
 const hashCommand = value => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 const remember = (document, id, hash) => ({ ...document, commands: [...document.commands, { id, hash }].slice(-128) })
@@ -56,7 +57,7 @@ export function coreTransition(original, body, now, choices = { id: randomUUID, 
       const result = document.state.results?.presentation
       if (result?.kind !== 'ranking') throw new Error('Ranking belum siap dilanjutkan.')
       scoring = { ...scoring, revision: scoring.revision + 1, dismissed: [...new Set([...scoring.dismissed, result.round])] }
-      state = result.round < 3 ? applySharedCommand(document.state, { type: 'phase', index: document.state.rundown.phaseIndex + 1, start: true }, now, choices) : document.state
+      state = result.round < roundCountFor(document.state.rundown) ? applySharedCommand(document.state, { type: 'phase', index: document.state.rundown.phaseIndex + 1, start: true }, now, choices) : document.state
     } else state = applySharedCommand(document.state, body.command, now, choices)
     assertSharedGame(state)
     document = remember(reconcileSession({ ...document, state, scoring }, document), body.commandId, hash)
@@ -71,8 +72,9 @@ export function scoringTransition(original, body, actor, now, id = randomUUID) {
   const hash = hashCommand({ gameId: body.gameId, gm: body.command }), prior = document.commands.find(entry => entry.id === body.commandId)
   if (prior) return reply(prior.hash === hash ? 200 : 409, prior.hash === hash ? undefined : 'ID perintah sudah digunakan.')
   try {
-    const scoring = applyScoringCommand(document.scoring, body.command, actor, now, id)
-    assertScoring(scoring)
+    const roundCount = roundCountFor(document.state.rundown)
+    const scoring = applyScoringCommand(document.scoring, body.command, actor, now, id, roundCount)
+    assertScoring(scoring, roundCount)
     document = remember(reconcileSession({ ...document, scoring }, document), body.commandId, hash)
     return reply(200)
   } catch (error) { return reply(error instanceof ScoreConflict ? 409 : 400, error.message) }

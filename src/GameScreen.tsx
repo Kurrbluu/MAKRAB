@@ -25,7 +25,7 @@ import {
   setTimerDuration, startTimer,
 } from './lib/gameTimer'
 import {
-  completeRundownDraw, createRundown, prepareRundownDraw, restoreRundown, RUNDOWN_VERSION, rundownStorageKey,
+  addRundownRound, canAddRundownRound, canQueueRundownRound, completeRundownDraw, createRundown, phaseCountFor, prepareRundownDraw, queueRundownRound, restoreRundown, roundCountFor, RUNDOWN_VERSION, rundownStorageKey,
   selectRundownPhase, settleRundown, startRundownPhase,
 } from './lib/gameRundown'
 import type { GameRundown } from './lib/gameRundown'
@@ -83,6 +83,8 @@ export default function GameScreen() {
   const rundownRef = useRef(rundown)
   const bank = rundown.bank
   const phase = GAME_PHASES[rundown.phaseIndex] ?? GAME_PHASES[0]
+  const roundCount = roundCountFor(rundown)
+  const phaseCount = phaseCountFor(rundown)
   const [localDraws, setDraws] = useState(() => shared ? emptySession() : loadDraws())
   const draws = shared?.snapshot?.state.draws ?? localDraws
   const drawsRef = useRef(draws)
@@ -254,8 +256,8 @@ export default function GameScreen() {
         if (next.phaseIndex !== current.phaseIndex) {
           setAnnouncement(`${GAME_PHASES[next.phaseIndex].title} dimulai.`)
         } else {
-          setAnnouncement(current.phaseIndex === GAME_PHASES.length - 1
-            ? 'Permainan selesai. Ketiga Exchange sudah tuntas. Tunggu pengumuman pemenang dari Game Master.'
+          setAnnouncement(current.phaseIndex === phaseCountFor(current) - 1
+            ? 'Permainan selesai. Semua Exchange sudah tuntas. Tunggu pengumuman pemenang dari Game Master.'
             : `${GAME_PHASES[current.phaseIndex].title} selesai. Pilih fase berikutnya.`)
         }
         commit(next)
@@ -295,11 +297,11 @@ export default function GameScreen() {
       if (shared.snapshot.state.results.presentation.kind === 'ranking') void shared.send({ type: 'resultsNext' })
       return
     }
-    if (index < 0 || index >= GAME_PHASES.length) return
+    if (index < 0 || index >= phaseCountFor(rundownRef.current)) return
     if (shared) { setDraft(null); setDialPreview(null); void shared.send({ type: 'phase', index, start }); return }
     stopPhaseCue()
     stopRandomizerSound()
-    const next = selectRundownPhase(index)
+    const next = selectRundownPhase(index, roundCountFor(rundownRef.current))
     const nextPhase = GAME_PHASES[index]
     animatingRoundRef.current = null
     setAnimatingRound(null)
@@ -307,7 +309,29 @@ export default function GameScreen() {
     setDialPreview(null)
     commit(start ? startRundownPhase(next, Date.now()) : next)
     setAnnouncement(`${nextPhase.title}. ${start ? nextPhase.drawTargets ? 'Undian dimulai, kemudian timer.' : 'Timer dimulai.' : 'Timer siap.'}`)
-  }, [commit, shared?.send])
+  }, [commit, shared?.send, shared?.snapshot?.state.results?.presentation])
+
+  function addExtraRound() {
+    if (shared) { void shared.send({ type: 'addRound' }); return }
+    try {
+      const next = addRundownRound(settleRundown(rundownRef.current, Date.now()))
+      stopPhaseCue()
+      stopRandomizerSound()
+      setDraft(null)
+      setDialPreview(null)
+      commit(startRundownPhase(next, Date.now()))
+      setAnnouncement(`${GAME_PHASES[next.phaseIndex].title} dimulai dengan undian baru.`)
+    } catch (error) { setAnnouncement(error instanceof Error ? error.message : 'Ronde tambahan belum dapat dimulai.') }
+  }
+
+  function queueExtraRound() {
+    if (shared) { void shared.send({ type: 'queueRound' }); return }
+    try {
+      const current = rundownRef.current
+      commit(queueRundownRound(current))
+      setAnnouncement(`Exchange ${roundCountFor(current) + 1} ditambahkan. Timer saat ini tetap berjalan.`)
+    } catch (error) { setAnnouncement(error instanceof Error ? error.message : 'Ronde tambahan belum dapat disiapkan.') }
+  }
 
   const toggleFullscreen = useCallback(async () => {
     try {
@@ -352,7 +376,7 @@ export default function GameScreen() {
       if (target?.closest('button, a, input, select, textarea, [contenteditable="true"], dialog[open], [role="dialog"], [role="slider"]')) return
       const current = rundownRef.current
       if (shared?.snapshot?.state.results?.presentation && (event.code === 'Space' || event.code === 'KeyR')) { event.preventDefault(); return }
-      if (current.phaseIndex === GAME_PHASES.length - 1 && remainingTime(current.bank.timers.movement, sharedNow?.() ?? Date.now()) === 0
+      if (current.phaseIndex === phaseCountFor(current) - 1 && remainingTime(current.bank.timers.movement, sharedNow?.() ?? Date.now()) === 0
         && (event.code === 'Space' || event.code === 'KeyR')) { event.preventDefault(); return }
       if (event.code === 'Space') { event.preventDefault(); toggle() }
       if (event.code === 'KeyR') { event.preventDefault(); restart() }
@@ -360,7 +384,7 @@ export default function GameScreen() {
     }
     window.addEventListener('keydown', keydown)
     return () => { document.removeEventListener('fullscreenchange', changed); window.removeEventListener('keydown', keydown) }
-  }, [changePhase, restart, toggle, toggleFullscreen])
+  }, [changePhase, restart, toggle, toggleFullscreen, shared?.snapshot?.state.results?.presentation])
 
   async function editDuration() {
     let current = rundownRef.current
@@ -421,13 +445,18 @@ export default function GameScreen() {
   const remaining = remainingTime(timer, now)
   const displayedRemaining = dialPreview ?? remaining
   const ringFraction = Math.max(0, Math.min(1, displayedRemaining / timer.durationMs))
-  const gameFinished = phase.id === 'exchange-final' && remaining === 0 && timer.deadline === null && !results
+  const gameFinished = rundown.phaseIndex === phaseCount - 1 && remaining === 0 && timer.deadline === null && !results
+  const canAddRound = (!shared || shared.canControl) && canAddRundownRound(rundown) && results?.kind !== 'waiting'
+  const canQueueRound = (!shared || shared.canControl) && canQueueRundownRound(rundown)
+  const queuedRound = (!shared || shared.canControl) && phase.timerId === 'movement' && phase.round && phase.round >= 3 && phase.round < roundCount
+    ? phase.round + 1 : null
+  const extraRound = canAddRound ? (roundCount + 1) as ExchangeNumber : undefined
   const running = timer.deadline !== null
   const editing = draft?.id === phase.timerId
   const formId = `duration-${phase.timerId}`
   const drawing = Boolean(drawRound && (animatingRound === drawRound || rundown.startAfterDraw))
   const lastSeconds = running && remaining > 0 && remaining <= 15_000 && !drawing && !editing
-  const timerState = remaining === 0 ? rundown.phaseIndex === GAME_PHASES.length - 1 ? 'Permainan selesai · Umumkan pemenang.' : 'Waktu habis' : running ? 'Timer berjalan' : remaining < timer.durationMs ? 'Timer dijeda' : 'Siap dimulai'
+  const timerState = remaining === 0 ? rundown.phaseIndex === phaseCount - 1 ? 'Permainan selesai · Umumkan pemenang.' : 'Waktu habis' : running ? 'Timer berjalan' : remaining < timer.durationMs ? 'Timer dijeda' : 'Siap dimulai'
   const connectionNotice = shared && shared.connection !== 'connected'
     ? shared.connection === 'connecting' ? 'Menghubungkan sesi…' : 'Menyambungkan kembali…'
     : undefined
@@ -466,10 +495,10 @@ export default function GameScreen() {
           <div className="timer-phase-display" aria-disabled={sharedUnavailable || undefined}>
             <PhaseDisplayFrame />
             <select id="timer-phase" className="timer-phase-select" value={rundown.phaseIndex} disabled={sharedUnavailable} title={results ? `Hasil Exchange ${results.round}` : gameFinished ? 'Permainan selesai' : phase.title} onChange={(event) => changePhase(Number(event.target.value))}>
-              {GAME_PHASES.map((item, phaseIndex) => <option key={item.id} value={phaseIndex}>{phaseIndex === rundown.phaseIndex && results ? `Hasil Exchange ${results.round}` : gameFinished && phaseIndex === rundown.phaseIndex ? 'Permainan selesai' : phaseLabel(item)}</option>)}
+              {GAME_PHASES.slice(0, phaseCount).map((item, phaseIndex) => <option key={item.id} value={phaseIndex}>{phaseIndex === rundown.phaseIndex && results ? `Hasil Exchange ${results.round}` : gameFinished && phaseIndex === rundown.phaseIndex ? 'Permainan selesai' : phaseLabel(item)}</option>)}
             </select>
           </div>
-          <button className={`timer-icon-button timer-next-phase${remaining === 0 ? ' is-ready' : ''}`} onClick={() => changePhase(rundown.phaseIndex + 1, true)} disabled={(rundown.phaseIndex === GAME_PHASES.length - 1 && results?.kind !== 'ranking') || results?.kind === 'waiting' || sharedUnavailable} aria-label={results ? 'Lanjut dari ranking' : 'Mulai fase berikutnya'} aria-keyshortcuts="ArrowRight" title="Lanjut · →"><ControlIcon name="next" /></button>
+          <button className={`timer-icon-button timer-next-phase${remaining === 0 ? ' is-ready' : ''}`} onClick={() => changePhase(rundown.phaseIndex + 1, true)} disabled={(rundown.phaseIndex === phaseCount - 1 && results?.kind !== 'ranking') || results?.kind === 'waiting' || sharedUnavailable} aria-label={results ? 'Lanjut dari ranking' : 'Mulai fase berikutnya'} aria-keyshortcuts="ArrowRight" title="Lanjut · →"><ControlIcon name="next" /></button>
         </div>
         <div className="timer-nav-actions">
           <SoundActivation settings={cueSettings} status={audioStatus} onOpenSettings={() => setCueSettingsOpen(true)} />
@@ -479,7 +508,7 @@ export default function GameScreen() {
         </div>
       </nav>
 
-      {results ? <ExchangeResults result={results} disabled={sharedUnavailable} onContinue={() => { if (shared) void shared.send({ type: 'resultsNext' }) }} />
+      {results ? <ExchangeResults result={results} lastRound={roundCount} extraRound={extraRound} onAddRound={canAddRound ? addExtraRound : undefined} disabled={sharedUnavailable} onContinue={() => { if (shared) void shared.send({ type: 'resultsNext' }) }} />
       : gameFinished ? <GameEndScreen onNewGame={() => newGameDialogRef.current?.showModal()} onHome={shared ? () => { void shared.send({ type: 'home' }) } : undefined} disabled={sharedUnavailable} />
       : <>
       <section aria-labelledby="active-phase-title" data-timer-attention={lastSeconds ? 'last-seconds' : undefined} className={`timer-panel is-current${drawing ? ' timer-panel--roulette' : ''}${running ? ' is-running' : ''}${remaining === 0 ? ' is-finished' : ''}${editing ? ' is-editing' : ''}`}>
@@ -502,6 +531,8 @@ export default function GameScreen() {
           </div>
         </div>
         <div className="timer-operator-controls">
+          {canQueueRound && <button className="timer-extra-round" disabled={sharedUnavailable || editing || dialPreview !== null} onClick={queueExtraRound}>Tambah Exchange {roundCount + 1} <span aria-hidden="true">＋</span></button>}
+          {queuedRound && <p className="timer-extra-round-ready" role="status">Exchange {queuedRound} sudah disiapkan <span aria-hidden="true">✓</span></p>}
           <p className="timer-state" role={shared ? 'status' : undefined}>{dialPreview !== null ? 'Atur waktu · lepas untuk simpan' : timerState}</p>
           <div className="timer-card-controls">
             {editing ? <>

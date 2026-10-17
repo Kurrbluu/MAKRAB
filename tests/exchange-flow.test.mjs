@@ -55,12 +55,12 @@ test('the manual randomizer retains five independent result slots', () => {
   }
 })
 
-test('only the three Terawang preparation phases trigger draws, never discussion or Gambler movement', () => {
+test('only Terawang preparation phases trigger draws, including optional rounds', () => {
   const triggers = GAME_PHASES.flatMap((phase, index) => {
     const round = exchangeDrawRound(index)
     return round === null ? [] : [[phase.id, round]]
   })
-  assert.deepEqual(triggers, [['terawang-1', 1], ['terawang-2', 2], ['terawang-final', 3]])
+  assert.deepEqual(triggers, [['terawang-1', 1], ['terawang-2', 2], ['terawang-final', 3], ['terawang-4', 4], ['terawang-5', 5]])
   for (const id of ['discussion-1', 'discussion-2', 'discussion-final', 'exchange-1', 'gambler-movement', 'exchange-2', 'exchange-final']) {
     assert.equal(exchangeDrawRound(phaseIndex(id)), null, id)
   }

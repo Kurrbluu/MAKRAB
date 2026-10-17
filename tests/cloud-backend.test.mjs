@@ -10,6 +10,86 @@ import { readFileSync } from 'node:fs'
 import { createSupabaseStore } from '../server/supabase-store.mjs'
 
 const configuration = { url: 'https://test.supabase.co', secretKey: 'sb_secret_test', publishableKey: 'sb_publishable_test', pin: '246810', sessionKey: 'makrab-big-game' }
+
+test('queuing a round while Exchange 3 runs is authenticated, atomic across functions, and never changes its deadline', async t => {
+  const f = await fixture(t), cookie = (await f.login('GM Queue')).cookie.split(';')[0]
+  assert.equal((await f.core(undefined, { type: 'queueRound' })).status, 401)
+  const selected = await f.core(cookie, { type: 'phase', index: 9, start: true })
+  const original = selected.body.state
+  const queued = await Promise.all(['one', 'two'].map(instance => f.core(cookie, { type: 'queueRound' }, { instance, revision: original.revision })))
+  assert.deepEqual(queued.map(result => result.status).sort(), [200, 409])
+  const state = await f.state()
+  assert.equal(state.rundown.roundCount, 4)
+  assert.equal(state.rundown.phaseIndex, 9)
+  assert.deepEqual(state.rundown.bank, original.rundown.bank)
+  assert.deepEqual(state.draws, original.draws)
+  assert.deepEqual(state.cue, original.cue)
+  assert.equal(state.presentation, null)
+  const publicRow = (await f.db.query('select state from public.makrab_public_sessions')).rows[0].state
+  assert.deepEqual(publicRow, state)
+  f.replace(1)
+  assert.equal((await f.request('/api/gm/session', { cookie, instance: 'two' })).body.roundCount, 4)
+  f.setNow(original.rundown.bank.timers.movement.deadline + 1)
+  assert.equal((await f.state()).rundown.phaseIndex, 9)
+  const next = await f.core(cookie, { type: 'phase', index: 10, start: true })
+  assert.equal(next.status, 200)
+  assert.equal(next.body.state.presentation.round, 4)
+})
+
+test('optional online rounds are GM-only, activate once across functions, and retain cumulative results through Exchange 5', async t => {
+  const f = await fixture(t), cookie = (await f.login('GM Extra')).cookie.split(';')[0]
+  assert.equal((await f.core(undefined, { type: 'addRound' })).status, 401)
+  assert.equal((await f.core(cookie, { type: 'addRound' })).status, 400)
+  await f.gm(cookie, { type: 'scoresEnable', enabled: true })
+  assert.equal((await f.gm(cookie, { type: 'scoreSet', round: 4, room: 'a', factionId: FACTION_IDS[0], role: 'vip', expectedEntryRevision: null })).status, 400)
+  for (const round of [1, 2, 3]) for (const room of ['a', 'b']) for (const factionId of FACTION_IDS) {
+    assert.equal((await f.gm(cookie, { type: 'scoreAdd', expectedRound: round, room, factionId, role: 'vip' })).status, 200)
+  }
+  const selected = await f.core(cookie, { type: 'phase', index: 9, start: true })
+  f.setNow(selected.body.state.rundown.bank.timers.movement.deadline + 1)
+  const third = await f.state()
+  assert.equal(third.results.presentation.kind, 'ranking')
+  assert.equal(third.results.presentation.round, 3)
+  const activate = await Promise.all(['one', 'two'].map(instance => f.core(cookie, { type: 'addRound' }, { revision: third.revision, instance })))
+  assert.deepEqual(activate.map(result => result.status).sort(), [200, 409])
+  let state = await f.state()
+  assert.equal(state.rundown.roundCount, 4)
+  assert.equal(state.rundown.phaseIndex, 10)
+  assert.equal(state.presentation.round, 4)
+  f.replace(1)
+  assert.equal((await f.request('/api/gm/session', { cookie, instance: 'two' })).body.roundCount, 4)
+  for (const round of [4, 5]) {
+    if (round === 5) {
+      assert.equal((await f.core(cookie, { type: 'addRound' }, { instance: 'two' })).status, 200)
+      state = await f.state()
+    }
+    const presentation = state.presentation
+    f.setNow(presentation.completesAt + 700)
+    assert.equal((await f.state()).rundown.bank.timers.terawang.deadline, presentation.completesAt + 90_000)
+    const writes = await Promise.all(['a', 'b'].flatMap(room => FACTION_IDS.map(factionId => f.gm(cookie,
+      { type: 'scoreAdd', expectedRound: round, room, factionId, role: 'vip' }, { instance: room === 'a' ? 'one' : 'two' }))))
+    assert(writes.every(result => result.status === 200))
+    const exchange = await f.core(cookie, { type: 'phase', index: round === 4 ? 12 : 15, start: true })
+    assert.equal(exchange.status, 200)
+    assert.equal(exchange.body.state.rundown.bank.timers.movement.durationMs, 180_000)
+    f.setNow(exchange.body.state.rundown.bank.timers.movement.deadline + 1)
+    state = await f.state()
+    assert.equal(state.results.presentation.kind, 'ranking')
+    assert.equal(state.results.presentation.round, round)
+    const privateData = (await f.request('/api/gm/session', { cookie })).body
+    assert.equal(privateData.scoring.entries.length, round * 8)
+    assert(Object.values(privateData.totals).every(total => total === round * 6))
+    const projected = (await f.db.query('select state from public.makrab_public_sessions')).rows[0].state
+    assert.deepEqual(projected, state)
+    for (const key of ['points', 'totals', 'actor', 'history', 'scoring', 'entries', 'gmPin']) assert(!JSON.stringify(projected).includes(`"${key}"`))
+    assert.equal((await f.core(cookie, { type: 'resultsNext' })).status, 200)
+    assert.equal((await f.state()).results.presentation, null, 'unused later sets never block ending')
+  }
+  assert.equal((await f.core(cookie, { type: 'addRound' })).status, 400)
+  assert.equal((await f.core(cookie, { type: 'newGame' })).status, 200)
+  assert.equal((await f.request('/api/gm/session', { cookie })).body.roundCount, 3)
+  assert.equal((await f.request('/api/gm/session', { cookie })).body.scoring.entries.length, 0)
+})
 async function fixture(t, { rewrite } = {}) {
   let now = 1_000_000
   const clock = () => now

@@ -262,6 +262,11 @@ body:has(.timer-screen) {
 }
 .timer-panel.is-finished .timer-readout { color: var(--timer-color); }
 .timer-operator-controls { display: grid; justify-items: center; gap: 10px; }
+.timer-extra-round { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 30px; padding: 6px 12px; border: 1px solid #d8b07a70; border-radius: 7px; color: #e4d2b0; background: #21242fbb; font: inherit; font-size: 11px; line-height: 1.2; cursor: pointer; }
+.timer-extra-round:hover:not(:disabled) { background: #2c2c36; border-color: #d8b07a; }
+.timer-extra-round:focus-visible { outline: 2px solid #e4d2b0; outline-offset: 3px; }
+.timer-extra-round:disabled { opacity: .45; cursor: default; }
+.timer-extra-round-ready { margin: 0; color: #b7cba9; font-size: 10px; line-height: 1.3; text-align: center; }
 .timer-state { margin: 0; color: #aebdc7; font-size: 12px; line-height: 1.3; }
 .timer-panel.is-running .timer-state { color: var(--timer-color); }
 .timer-card-controls { display: flex; align-items: center; justify-content: center; gap: 12px; }

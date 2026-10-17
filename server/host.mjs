@@ -7,6 +7,7 @@ import { networkInterfaces } from 'node:os'
 import { parseArgs } from 'node:util'
 import { createSharedGame, advanceSharedGame, applySharedCommand, assertSharedGame, isSharedCommand } from '../src/lib/sharedGame.ts'
 import { createScoring, syncScoring, publicResults, scoreTotals, applyScoringCommand, assertScoring, isScoringCommand, ScoreConflict } from '../src/lib/gameScoring.ts'
+import { roundCountFor } from '../src/lib/gameRundown.ts'
 
 const projectRoot = fileURLToPath(new URL('../', import.meta.url))
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -32,7 +33,7 @@ export function createGameHost({ stateDirectory = resolve(projectRoot, '.game-st
     try {
       store = JSON.parse(readFileSync(stateFile, 'utf8'))
       assertSharedGame(store.state)
-      if (store.scoring) { assertScoring(store.scoring); if (store.scoring.gameId !== store.state.gameId) throw new Error('Catatan poin berasal dari sesi lain.') }
+      if (store.scoring) { assertScoring(store.scoring, roundCountFor(store.state.rundown)); if (store.scoring.gameId !== store.state.gameId) throw new Error('Catatan poin berasal dari sesi lain.') }
       if (store.gmPin !== undefined && !/^\d{4,12}$/.test(store.gmPin)) throw new Error('PIN GM tidak valid.')
       if (store.version !== 1 || !Array.isArray(store.commands) || store.commands.length > 128
         || store.commands.some(entry => typeof entry.id !== 'string' || typeof entry.hash !== 'string')) throw new Error('Riwayat perintah tidak valid.')
@@ -57,7 +58,7 @@ export function createGameHost({ stateDirectory = resolve(projectRoot, '.game-st
     store = next
   }
   function snapshot() { return { state: store.state, serverNow: clock() } }
-  function gmSnapshot(actor) { return { scoring: store.scoring, totals: scoreTotals(store.scoring), actor, serverNow: clock() } }
+  function gmSnapshot(actor) { return { scoring: store.scoring, totals: scoreTotals(store.scoring), roundCount: roundCountFor(store.state.rundown), actor, serverNow: clock() } }
   function reconcile(nextStore) {
     const scoring = syncScoring(nextStore.scoring, nextStore.state)
     const results = publicResults(scoring, nextStore.state)
@@ -143,7 +144,7 @@ export function createGameHost({ stateDirectory = resolve(projectRoot, '.game-st
             const previous = store.commands.find(entry => entry.id === body.commandId)
             if (previous) { json(previous.hash === hash ? 200 : 409, previous.hash === hash ? gmSnapshot(session.actor) : { ...gmSnapshot(session.actor), error: 'ID perintah sudah digunakan.' }); return }
             let scoring
-            try { scoring = applyScoringCommand(store.scoring, body.command, session.actor, clock(), randomUUID); assertScoring(scoring) }
+            try { scoring = applyScoringCommand(store.scoring, body.command, session.actor, clock(), randomUUID, roundCountFor(store.state.rundown)); assertScoring(scoring, roundCountFor(store.state.rundown)) }
             catch (error) { json(error instanceof ScoreConflict ? 409 : 400, { ...gmSnapshot(session.actor), error: error.message }); return }
             const next = reconcile({ ...store, scoring, commands: [...store.commands, { id: body.commandId, hash }].slice(-128) })
             const changed = next.state !== store.state
@@ -186,7 +187,7 @@ export function createGameHost({ stateDirectory = resolve(projectRoot, '.game-st
               const result = store.state.results?.presentation
               if (result?.kind !== 'ranking') throw new Error('Ranking belum siap dilanjutkan.')
               scoring = { ...scoring, revision: scoring.revision + 1, dismissed: [...new Set([...scoring.dismissed, result.round])] }
-              next = result.round < 3 ? applySharedCommand(store.state, { type: 'phase', index: store.state.rundown.phaseIndex + 1, start: true }, clock(), { id: randomUUID, chooseIndex: randomInt }) : store.state
+              next = result.round < roundCountFor(store.state.rundown) ? applySharedCommand(store.state, { type: 'phase', index: store.state.rundown.phaseIndex + 1, start: true }, clock(), { id: randomUUID, chooseIndex: randomInt }) : store.state
             } else next = applySharedCommand(store.state, body.command, clock(), { id: randomUUID, chooseIndex: randomInt })
             assertSharedGame(next)
           }

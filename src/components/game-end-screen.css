@@ -28,7 +28,7 @@
 .game-end-announcement-icon { flex: none; width: 20px; height: 20px; color: #cdb383; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
 .game-end-announcement #game-end-announcement { margin: 0; color: #e2d7c2; font-size: clamp(13px, 2.2cqh, 17px); font-weight: 400; line-height: 1.45; text-wrap: balance; }
 .game-end-footer { flex-shrink: 0; width: min(100%, 680px); margin-top: clamp(10px, 2cqh, 17px); }
-.game-end-actions { display: flex; justify-content: center; align-items: center; gap: 22px; }
+.game-end-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 22px; }
 .game-end-home { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 36px; padding: 7px 15px; border: 1px solid #cbb78940; border-radius: 5px; color: #c4cbd0; background: #13223699; font-size: 11px; text-decoration: none; }
 .game-end-restart { min-height: 36px; padding: 7px 0; border: 0; color: #99acba; background: none; font: inherit; font-size: 11px; cursor: pointer; }
 .game-end-home:hover, .game-end-restart:hover { color: #f2e4c7; }
